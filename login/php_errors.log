@@ -1,0 +1,27 @@
+2025-05-13 07:25:08 [DEBUG] Script started
+2025-05-13 07:25:08 [DEBUG] Serving HTML for GET request
+2025-05-13 07:25:14 [DEBUG] Script started
+2025-05-13 07:25:14 [DEBUG] Processing POST request
+2025-05-13 07:25:14 [DEBUG] Attempting database connection
+2025-05-13 07:25:14 [DEBUG] Database connected successfully
+2025-05-13 07:25:14 [DEBUG] Processing admin login
+2025-05-13 07:25:14 [DEBUG] Checking admin credentials for ID: admin
+2025-05-13 07:25:14 [DEBUG] Admin login successful for ID: admin
+2025-05-13 07:25:14 [DEBUG] Closing database connection
+2025-05-13 07:25:14 [DEBUG] Sending response: {"status":"success","message":"Login admin berhasil","redirect":"admin_dashboard.php"}
+2025-05-13 07:25:15 [DEBUG] Admin dashboard script started
+2025-05-13 07:25:15 [DEBUG] Database connected successfully
+2025-05-13 07:25:22 [DEBUG] Script started
+2025-05-13 07:25:22 [DEBUG] Serving HTML for GET request
+2025-05-13 07:25:27 [DEBUG] Script started
+2025-05-13 07:25:27 [DEBUG] Processing POST request
+2025-05-13 07:25:27 [DEBUG] Attempting database connection
+2025-05-13 07:25:27 [DEBUG] Database connected successfully
+2025-05-13 07:25:27 [DEBUG] Processing student login
+2025-05-13 07:25:27 [DEBUG] Preparing student query for email: ifauze343@gmail.com
+2025-05-13 07:25:27 [DEBUG] Student query executed, rows: 1
+2025-05-13 07:25:27 [DEBUG] Student login successful for email: ifauze343@gmail.com
+2025-05-13 07:25:27 [DEBUG] Closing database connection
+2025-05-13 07:25:27 [DEBUG] Sending response: {"status":"success","message":"Login siswa berhasil","redirect":"student_dashboard.php"}
+2025-05-13 07:26:24 [DEBUG] Script started
+2025-05-13 07:26:24 [DEBUG] Redirecting logged-in user, user_type: student
