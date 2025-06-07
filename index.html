@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STM Gotham City</title>
     <link rel="icon" href="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,6 +13,12 @@
         body {
             font-family: 'Poppins', sans-serif;
             scroll-behavior: smooth;
+            overscroll-behavior: none;
+        }
+
+        /* Shared Transition Utility */
+        .transition-smooth {
+            transition: all 0.3s ease;
         }
 
         /* Custom Animations */
@@ -84,7 +90,6 @@
 
         /* Card Styling */
         .feature-card {
-            transition: all 0.3s ease;
             background: white;
             border-radius: 1rem;
             overflow: hidden;
@@ -101,38 +106,16 @@
             backdrop-filter: blur(10px);
             border-radius: 1.5rem;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
         }
 
         .info-card:hover {
-            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 15px 40px rgba piqu rgba(59, 130, 246, 0.2);
         }
 
-        /* Button Hover Effects */
+        /* Button Styling */
         .btn-hover-effect {
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .btn-hover-effect::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
-            transition: all 0.6s ease;
-        }
-
-        .btn-hover-effect:hover::before {
-            left: 100%;
-        }
-
-        /* Counter Animation */
-        .counter-value {
-            transition: all 0.5s ease;
         }
 
         /* Gallery Section */
@@ -171,7 +154,6 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             border-left: 4px solid transparent;
-            transition: all 0.3s ease;
             cursor: pointer;
         }
 
@@ -215,7 +197,6 @@
             overflow: hidden;
             border-radius: 1rem;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
         }
 
         .alumni-item:hover {
@@ -281,7 +262,6 @@
             justify-content: center;
             cursor: pointer;
             opacity: 0;
-            transition: all 0.3s ease;
             z-index: 1000;
             box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
         }
@@ -361,7 +341,6 @@
         .footer a {
             color: #bfdbfe;
             font-size: 0.9rem;
-            transition: all 0.3s ease;
         }
 
         .footer a:hover {
@@ -397,7 +376,6 @@
             background: #1e40af;
             border-radius: 50%;
             color: white;
-            transition: all 0.3s ease;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
@@ -415,110 +393,192 @@
             font-size: 0.85rem;
         }
 
-        /* Responsive Adjustments */
+        /* Mobile Menu Styles */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(30, 58, 138, 0.98);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-100%);
+        }
+
+        .mobile-menu.active {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .mobile-menu .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: white;
+            font-size: 1.75rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Mobile Menu Links Animation */
+        .mobile-menu a {
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition-delay: calc(0.1s * var(--index));
+        }
+
+        .mobile-menu.active a {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Mobile-Specific Styles */
         @media (max-width: 768px) {
+            /* Navigation */
+            .mobile-menu {
+                padding-top: 4rem;
+                background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
+            }
+            
+            .mobile-menu a {
+                font-size: 1.2rem;
+                padding: 1rem 2rem;
+                display: block;
+                text-align: center;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+            /* Hero Section */
             .hero-section {
-                min-height: 80vh;
+                min-height: 90vh;
+                padding: 6rem 1rem 2rem 1rem;
             }
-
+            
             .hero-section h1 {
-                font-size: 2.5rem;
+                font-size: 2.2rem;
+                line-height: 1.3;
             }
 
-            .hero-section p {
-                font-size: 1rem;
+            /* Content Sections */
+            section {
+                padding: 3rem 1rem;
             }
-
-            .navbar-fixed {
-                background-color: rgba(30, 58, 138, 1);
-            }
-
-            .feature-card, .info-card, .gallery-item, .alumni-item {
+            
+            .section-heading {
+                font-size: 2rem;
                 margin-bottom: 1.5rem;
             }
 
+            /* Cards */
+            .feature-card,
+            .info-card {
+                margin: 0.5rem 0;
+                padding: 1.25rem;
+            }
+            
+            .feature-card h3 {
+                font-size: 1.2rem;
+            }
+
+            /* Gallery & Alumni */
+            .gallery-item,
+            .alumni-item {
+                margin-bottom: 1.5rem;
+            }
+            
+            .gallery-overlay,
+            .alumni-overlay {
+                position: static;
+                opacity: 1;
+                background: rgba(59, 130, 246, 0.9);
+                padding: 1rem;
+                border-radius: 0 0 1rem 1rem;
+            }
+
+            /* Alumni Specific Styles */
+            .alumni-item img {
+                height: 200px;
+                object-fit: cover;
+            }
+            
+            .alumni-overlay h4 {
+                font-size: 1.1rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .alumni-overlay p {
+                font-size: 0.85rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .alumni-overlay .quote {
+                font-size: 0.8rem;
+            }
+
+            /* FAQ Section */
+            .faq-item {
+                background: white;
+                border-radius: 0.75rem;
+                margin-bottom: 1rem;
+                overflow: hidden;
+                border: 1px solid rgba(59, 130, 246, 0.1);
+            }
+
+            .faq-question {
+                padding: 1rem 1.5rem;
+                background: white;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            .faq-answer {
+                max-height: 0;
+                overflow: hidden;
+                padding: 0 1.5rem;
+                opacity: 0;
+                transition: all 0.3s ease-out;
+            }
+
             .faq-item.active .faq-answer {
-                max-height: 300px;
+                max-height: 500px;
+                padding: 1rem 1.5rem;
+                opacity: 1;
             }
 
-            .grid-cols-3, .grid-cols-4 {
-                grid-template-columns: 1fr;
+            .faq-icon {
+                transition: transform 0.3s ease;
             }
 
-            .container {
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-
-            .footer .grid-cols-4 {
-                grid-template-columns: 1fr 1fr;
-                gap: 2rem;
-            }
-
-            .footer-logo img {
-                width: 48px;
-                height: 48px;
-            }
-
-            .footer-logo h3 {
-                font-size: 1.5rem;
-            }
-
-            .footer-social a {
-                width: 40px;
-                height: 40px;
+            .faq-item.active .faq-icon {
+                transform: rotate(180deg);
             }
         }
 
-        @media (max-width: 640px) {
+        /* Additional Small Screen Adjustments */
+        @media (max-width: 375px) {
             .hero-section h1 {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
-
-            .hero-section p {
-                font-size: 0.875rem;
+            
+            .section-heading {
+                font-size: 1.6rem;
             }
-
-            .btn-hover-effect {
-                padding: 0.75rem 1.5rem;
-                font-size: 0.875rem;
+            
+            .mobile-bottom-nav {
+                padding: 0.5rem 0;
             }
-
-            .scroll-top {
-                width: 2.5rem;
-                height: 2.5rem;
-                bottom: 1.5rem;
-                right: 1.5rem;
-            }
-
-            .gallery-item img, .alumni-item img {
-                height: 200px;
-            }
-
-            .info-card, .feature-card {
-                padding: 1rem;
-            }
-
-            .footer .grid-cols-4 {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-
-            .footer-logo {
-                margin: 0 auto;
-            }
-
-            .footer-description {
-                margin: 0 auto;
-            }
-
-            .footer-social {
-                justify-content: center;
-            }
-
-            .footer h4::after {
-                left: 50%;
-                transform: translateX(-50%);
+            
+            .mobile-bottom-nav a {
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -534,13 +594,13 @@
                 <div class="text-white font-bold text-xl">STM Gotham City</div>
             </a>
             <div class="hidden md:flex space-x-8 items-center">
-                <a href="#beranda" class="text-white hover:text-blue-200 transition">Beranda</a>
-                <a href="#tentang" class="text-white hover:text-blue-200 transition">Tentang</a>
-                <a href="#keunggulan" class="text-white hover:text-blue-200 transition">Keunggulan</a>
-                <a href="#galeri" class="text-white hover:text-blue-200 transition">Galeri</a>
-                <a href="#lokasi" class="text-white hover:text-blue-200 transition">Lokasi</a>
-                <a href="login/login.php" class="text-white hover:text-blue-200 transition">Login</a>
-                <a href="pendaftaran/pendaftaran.php" class="text-white hover:text-blue-200 transition">Pendaftaran</a>
+                <a href="#beranda" class="text-white hover:text-blue-200 transition-smooth">Beranda</a>
+                <a href="#tentang" class="text-white hover:text-blue-200 transition-smooth">Tentang</a>
+                <a href="#keunggulan" class="text-white hover:text-blue-200 transition-smooth">Keunggulan</a>
+                <a href="#galeri" class="text-white hover:text-blue-200 transition-smooth">Galeri</a>
+                <a href="#lokasi" class="text-white hover:text-blue-200 transition-smooth">Lokasi</a>
+                <a href="login/login.php" class="text-white hover:text-blue-200 transition-smooth">Login</a>
+                <a href="pendaftaran/pendaftaran.php" class="text-white hover:text-blue-200 transition-smooth">Pendaftaran</a>
             </div>
             <div class="md:hidden">
                 <button id="mobile-menu-button" class="text-white focus:outline-none">
@@ -549,15 +609,18 @@
             </div>
         </div>
         <!-- Mobile Menu -->
-        <div id="mobile-menu" class="md:hidden hidden bg-blue-900 transition-all duration-300">
-            <div class="container mx-auto px-4 py-4 flex flex-col space-y-4">
-                <a href="#beranda" class="text-white hover:text-blue-200 transition py-2">Beranda</a>
-                <a href="#tentang" class="text-white hover:text-blue-200 transition py-2">Tentang</a>
-                <a href="#keunggulan" class="text-white hover:text-blue-200 transition py-2">Keunggulan</a>
-                <a href="#galeri" class="text-white hover:text-blue-200 transition py-2">Galeri</a>
-                <a href="#lokasi" class="text-white hover:text-blue-200 transition py-2">Lokasi</a>
-                <a href="login/login.php" class="text-white hover:text-blue-200 transition py-2">Login</a>
-                <a href="pendaftaran/pendaftaran.php" class="text-white hover:text-blue-200 transition py-2">Pendaftaran</a>
+        <div id="mobile-menu" class="mobile-menu md:hidden">
+            <button id="mobile-menu-close" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="container mx-auto px-4 py-8 flex flex-col space-y-4 items-center justify-center h-full">
+                <a href="#beranda" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Beranda</a>
+                <a href="#tentang" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Tentang</a>
+                <a href="#keunggulan" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Keunggulan</a>
+                <a href="#galeri" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Galeri</a>
+                <a href="#lokasi" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Lokasi</a>
+                <a href="login/login.php" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Login</a>
+                <a href="pendaftaran/pendaftaran.php" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Pendaftaran</a>
             </div>
         </div>
     </nav>
@@ -566,9 +629,6 @@
     <section id="beranda" class="hero-section">
         <div class="container mx-auto px-4 relative z-10">
             <div class="max-w-3xl">
-                <div class="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-6 animate-fadeInDown">
-                    <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="w-16 h-16 object-contain">
-                </div>
                 <h1 class="text-5xl md:text-6xl font-bold mb-4 animate-fadeInDown" style="animation-delay: 0.2s;">
                     Selamat Datang di <span class="text-blue-400">STM</span> Gotham City
                 </h1>
@@ -576,10 +636,10 @@
                     Inovasi, Teknologi, dan Prestasi
                 </p>
                 <div class="flex flex-wrap gap-4 animate-fadeInDown" style="animation-delay: 0.6s;">
-                    <a href="pendaftaran/pendaftaran.php" class="btn-hover-effect bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold transition-all hover:bg-blue-700 hover:shadow-lg animate-pulse">
+                    <a href="pendaftaran/pendaftaran.php" class="btn-hover-effect bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold transition-smooth hover:bg-blue-700 hover:shadow-lg animate-pulse">
                         Daftar Sekarang
                     </a>
-                    <a href="#tentang" class="btn-hover-effect bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold transition-all hover:bg-white hover:text-blue-900 animate-pulse">
+                    <a href="#tentang" class="btn-hover-effect bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold transition-smooth hover:bg-white hover:text-blue-900 animate-pulse">
                         Pelajari Lebih Lanjut
                     </a>
                 </div>
@@ -588,24 +648,24 @@
     </section>
 
     <!-- Stats Counter Section -->
-    <section class="py-12 bg-blue-900 text-white">
+    <section class="py-12 bg-blue-900 text-white transform hover:scale-100 transition-all duration-500 ease-in-out">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                <div class="animate-fadeInUp" style="animation-delay: 0.1s;">
+                <div class="animate-pulse" style="animation-delay: 0.1s;">
                     <div class="text-5xl font-bold mb-2">
-                        <span class="counter-value" data-target="200">0</span>+
+                        <span class="counter-value" data-target="200">100</span>+
                     </div>
                     <p class="text-lg opacity-80">Siswa Aktif</p>
                 </div>
                 <div class="animate-fadeInUp" style="animation-delay: 0.3s;">
                     <div class="text-5xl font-bold mb-2">
-                        <span class="counter-value" data-target="100">0</span>%
+                        <span class="counter-value" data-target="100">100</span>%
                     </div>
                     <p class="text-lg opacity-80">Kelulusan Industri & Perguruan Tinggi</p>
                 </div>
                 <div class="animate-fadeInUp" style="animation-delay: 0.5s;">
                     <div class="text-5xl font-bold mb-2">
-                        <span class="counter-value" data-target="20">0</span>+
+                        <span class="counter-value" data-target="20">50</span>+
                     </div>
                     <p class="text-lg opacity-80">Ekstrakurikuler</p>
                 </div>
@@ -835,32 +895,28 @@
                         <img src="https://smpbptahfidzattaubah.sch.id/media_library/posts/post-image-1690962011426.jpg" alt="Lomba Robotik" class="w-full h-64 object-cover" loading="lazy">
                         <div class="gallery-overlay">
                             <h4 class="text-white font-semibold">SENAM</h4>
-                            <p class="text-white text-sm opacity-90">Kegiatan rutin setiap Jumat untuk menjaga kebugaran dan kekompakan warga sekolah.
-                            </p>
+                            <p class="text-white text-sm opacity-90">Kegiatan rutin setiap Jumat untuk menjaga kebugaran dan kekompakan warga sekolah.</p>
                         </div>
                     </div>
                     <div class="gallery-item animate-zoomIn" style="animation-delay: 0.2s;">
                         <img src="https://awsimages.detik.net.id/community/media/visual/2022/05/17/walkot-mojokerto-ika-puspitasari-saat-upacara-pengibaran-bendera-merah-putih-untuk-memperingati-hari-pendidikan-nasional-hardi_169.jpeg?w=700&q=90" alt="Pelatihan Pemrograman" class="w-full h-64 object-cover" loading="lazy">
                         <div class="gallery-overlay">
                             <h4 class="text-white font-semibold">UPACARA BENDERA</h4>
-                            <p class="text-white text-sm opacity-90">Dilaksanakan setiap Senin sebagai bentuk kedisiplinan dan penghormatan kepada bangsa.
-                            </p>
+                            <p class="text-white text-sm opacity-90">Dilaksanakan setiap Senin sebagai bentuk kedisiplinan dan penghormatan kepada bangsa.</p>
                         </div>
                     </div>
                     <div class="gallery-item animate-zoomIn" style="animation-delay: 0.3s;">
                         <img src="https://smkdp1jkt.sch.id/wp-content/uploads/2019/07/PPKBN-7.jpeg" alt="Kunjungan Industri" class="w-full h-64 object-cover" loading="lazy">
                         <div class="gallery-overlay">
                             <h4 class="text-white font-semibold">SHALAT DHUHA BERJAMAAH</h4>
-                            <p class="text-white text-sm opacity-90">Menumbuhkan kebiasaan ibadah dan memperkuat karakter spiritual siswa.
-                            </p>
+                            <p class="text-white text-sm opacity-90">Menumbuhkan kebiasaan ibadah dan memperkuat karakter spiritual siswa.</p>
                         </div>
                     </div>
                     <div class="gallery-item animate-zoomIn" style="animation-delay: 0.4s;">
                         <img src="https://inikpop.com/wp-content/uploads/2018/01/fakta-warnet-di-korea-1.jpg" alt="Pameran Proyek" class="w-full h-64 object-cover" loading="lazy">
                         <div class="gallery-overlay">
                             <h4 class="text-white font-semibold">LAB KOMPUTER</h4>
-                            <p class="text-white text-sm opacity-90">Siswa belajar langsung menggunakan teknologi untuk mendukung keterampilan digital.
-                            </p>
+                            <p class="text-white text-sm opacity-90">Siswa belajar langsung menggunakan teknologi untuk mendukung keterampilan digital.</p>
                         </div>
                     </div>
                 </div>
@@ -990,7 +1046,7 @@
                             <p class="text-gray-600">Rp 400.000</p>
                         </div>
                     </div>
-                    <a href="pendaftaran/pendaftaran.php" class="btn-hover-effect inline-block bg-white text-blue-900 px-10 py-4 rounded-lg font-semibold transition-all hover:bg-gray-100 animate-pulse" style="animation-delay: 0.7s;">
+                    <a href="pendaftaran/pendaftaran.php" class="btn-hover-effect inline-block bg-white text-blue-900 px-10 py-4 rounded-lg font-semibold transition-smooth hover:bg-gray-100 animate-pulse" style="animation-delay: 0.7s;">
                         Daftar Sekarang
                     </a>
                 </div>
@@ -1039,21 +1095,21 @@
                                 <div>
                                     <p class="text-gray-600">
                                         <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c5acaba3aa85b6b1a8a2aab1ada4a8a6acb1bcebb6a6adebaca1">[email&#160;protected]</a><br>
-                                        <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="92f3f6fffbfcd2e1e6fff5fde6faf3fff1fbe6ebbce1f1fabcfbf6">[email&#160;protected]</a>
+                                        <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d2f3f6fffbfcd2e1e6fff5fde6faf3fff1fbe6ebbce1f1fabcfbf6">[email&#160;protected]</a>
                                     </p>
                                 </div>
                             </div>
                             <div class="flex space-x-4">
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all">
+                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
                                     <i class="fab fa-facebook-f"></i>
                                 </a>
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all">
+                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
                                     <i class="fab fa-instagram"></i>
                                 </a>
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all">
+                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
                                     <i class="fab fa-twitter"></i>
                                 </a>
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all">
+                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
                                     <i class="fab fa-youtube"></i>
                                 </a>
                             </div>
@@ -1111,7 +1167,7 @@
                             </li>
                             <li>
                                 <i class="fas fa-envelope"></i>
-                                <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5831363e37182b2c353f372c3039353b312c21762b3b3076313c">[email&#160;protected]</a>
+                                <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c5acaba3aa85b6b1a8a2aab1ada4a8a6acb1bcebb6a6adebaca1">[email&#160;protected]</a>
                             </li>
                         </ul>
                     </div>
@@ -1140,7 +1196,8 @@
         </button>
 
         <!-- JavaScript -->
-        <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+        <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+        <script>
             // Navbar scroll effect
             window.addEventListener('scroll', () => {
                 const navbar = document.getElementById('navbar');
@@ -1158,8 +1215,46 @@
             });
             
             // Mobile menu toggle
-            document.getElementById('mobile-menu-button').addEventListener('click', () => {
-                document.getElementById('mobile-menu').classList.toggle('hidden');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuButton = document.getElementById('mobile-menu-button');
+            const closeButton = document.getElementById('mobile-menu-close');
+            
+            // Add index to menu links for staggered animation
+            document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
+                link.style.setProperty('--index', index);
+            });
+            
+            menuButton.addEventListener('click', () => {
+                mobileMenu.classList.add('active');
+                // Reset animations
+                document.querySelectorAll('#mobile-menu a').forEach(link => {
+                    link.style.opacity = '0';
+                    link.style.transform = 'translateX(-20px)';
+                });
+                // Trigger animations after a small delay
+                setTimeout(() => {
+                    document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
+                        link.style.opacity = '1';
+                        link.style.transform = 'translateX(0)';
+                    });
+                }, 100);
+            });
+            
+            closeButton.addEventListener('click', () => {
+                document.querySelectorAll('#mobile-menu a').forEach(link => {
+                    link.style.opacity = '0';
+                    link.style.transform = 'translateX(-20px)';
+                });
+                setTimeout(() => {
+                    mobileMenu.classList.remove('active');
+                }, 300);
+            });
+            
+            // Close mobile menu when clicking a link
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.remove('active');
+                });
             });
             
             // Smooth scrolling for anchor links
@@ -1175,7 +1270,6 @@
                             top: targetElement.offsetTop - 100,
                             behavior: 'smooth'
                         });
-                        document.getElementById('mobile-menu').classList.add('hidden');
                     }
                 });
             });
@@ -1233,26 +1327,61 @@
                 });
             });
 
-            // Initialize animations when elements are in viewport
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        if (entry.target.classList.contains('counter-value')) {
-                            animateCounters();
-                        } else if (entry.target.classList.contains('animate-on-scroll')) {
-                            entry.target.classList.add('animate');
-                        }
+            // Mobile Bottom Navigation Active State
+            const mobileNavLinks = document.querySelectorAll('.mobile-bottom-nav a');
+            const sections = document.querySelectorAll('section[id]');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (window.pageYOffset >= sectionTop - 60) {
+                        current = section.getAttribute('id');
                     }
                 });
-            }, { threshold: 0.2 });
-            
-            // Observe counters and animated elements
-            document.querySelectorAll('.counter-value').forEach(counter => {
-                observer.observe(counter);
+                
+                mobileNavLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
             });
-            document.querySelectorAll('.animate-on-scroll').forEach(element => {
-                observer.observe(element);
+
+            // Prevent Mobile Browser Address Bar Show/Hide Affect Layout
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+
+            window.addEventListener('resize', () => {
+                let vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
             });
+
+            // Add Touch Swipe Support for Gallery
+            let touchstartX = 0;
+            let touchendX = 0;
+            const slider = document.querySelector('.gallery-container');
+
+            slider.addEventListener('touchstart', e => {
+                touchstartX = e.changedTouches[0].screenX;
+            });
+
+            slider.addEventListener('touchend', e => {
+                touchendX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                if (touchendX < touchstartX) {
+                    // Swipe left
+                    nextSlide();
+                }
+                if (touchendX > touchstartX) {
+                    // Swipe right
+                    previousSlide();
+                }
+            }
         </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93c1c4d72b7dd47d',t:'MTc0NjYzMTkzNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+    </body>
 </html>

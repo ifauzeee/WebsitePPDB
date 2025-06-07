@@ -1,27 +1,72 @@
-2025-05-13 07:25:08 [DEBUG] Script started
-2025-05-13 07:25:08 [DEBUG] Serving HTML for GET request
-2025-05-13 07:25:14 [DEBUG] Script started
-2025-05-13 07:25:14 [DEBUG] Processing POST request
-2025-05-13 07:25:14 [DEBUG] Attempting database connection
-2025-05-13 07:25:14 [DEBUG] Database connected successfully
-2025-05-13 07:25:14 [DEBUG] Processing admin login
-2025-05-13 07:25:14 [DEBUG] Checking admin credentials for ID: admin
-2025-05-13 07:25:14 [DEBUG] Admin login successful for ID: admin
-2025-05-13 07:25:14 [DEBUG] Closing database connection
-2025-05-13 07:25:14 [DEBUG] Sending response: {"status":"success","message":"Login admin berhasil","redirect":"admin_dashboard.php"}
-2025-05-13 07:25:15 [DEBUG] Admin dashboard script started
-2025-05-13 07:25:15 [DEBUG] Database connected successfully
-2025-05-13 07:25:22 [DEBUG] Script started
-2025-05-13 07:25:22 [DEBUG] Serving HTML for GET request
-2025-05-13 07:25:27 [DEBUG] Script started
-2025-05-13 07:25:27 [DEBUG] Processing POST request
-2025-05-13 07:25:27 [DEBUG] Attempting database connection
-2025-05-13 07:25:27 [DEBUG] Database connected successfully
-2025-05-13 07:25:27 [DEBUG] Processing student login
-2025-05-13 07:25:27 [DEBUG] Preparing student query for email: ifauze343@gmail.com
-2025-05-13 07:25:27 [DEBUG] Student query executed, rows: 1
-2025-05-13 07:25:27 [DEBUG] Student login successful for email: ifauze343@gmail.com
-2025-05-13 07:25:27 [DEBUG] Closing database connection
-2025-05-13 07:25:27 [DEBUG] Sending response: {"status":"success","message":"Login siswa berhasil","redirect":"student_dashboard.php"}
-2025-05-13 07:26:24 [DEBUG] Script started
-2025-05-13 07:26:24 [DEBUG] Redirecting logged-in user, user_type: student
+2025-06-01 13:27:48 [DEBUG] Script started
+2025-06-01 13:27:48 [DEBUG] Serving HTML for GET request
+2025-06-01 13:29:01 [DEBUG] Script started
+2025-06-01 13:29:01 [DEBUG] Processing POST request
+2025-06-01 13:29:01 [DEBUG] Attempting database connection
+2025-06-01 13:29:01 [DEBUG] Database connected successfully
+2025-06-01 13:29:01 [DEBUG] Processing admin login
+2025-06-01 13:29:01 [DEBUG] Checking admin credentials for ID: admin
+2025-06-01 13:29:02 [DEBUG] Admin login successful for ID: admin
+2025-06-01 13:29:02 [DEBUG] Closing database connection
+2025-06-01 13:29:02 [DEBUG] Sending response: {"status":"success","message":"Login admin berhasil","redirect":"admin_dashboard.php"}
+2025-06-01 13:29:02 [DEBUG] Admin dashboard script started
+2025-06-01 13:29:02 [DEBUG] Database connected successfully
+2025-06-01 13:33:05 [DEBUG] Admin dashboard script started
+2025-06-01 13:33:05 [DEBUG] Database connected successfully
+2025-06-01 13:33:10 [DEBUG] Admin dashboard script started
+2025-06-01 13:33:10 [DEBUG] Database connected successfully
+2025-06-01 13:33:12 [DEBUG] Inbox script started
+2025-06-01 13:33:12 [DEBUG] Database connected successfully
+2025-06-01 13:33:37 [DEBUG] Inbox script started
+2025-06-01 13:33:37 [DEBUG] Database connected successfully
+2025-06-01 13:33:37 [DEBUG] Processing get_conversation action for registration_id: 20
+2025-06-01 13:33:37 [DEBUG] Fetched 2 conversation messages
+2025-06-05 11:14:56 [DEBUG] Script started
+2025-06-05 11:14:56 [DEBUG] Serving HTML for GET request
+2025-06-05 11:15:03 [DEBUG] Script started
+2025-06-05 11:15:03 [DEBUG] Processing POST request
+2025-06-05 11:15:03 [DEBUG] Attempting database connection
+2025-06-05 11:15:03 [DEBUG] Database connected successfully
+2025-06-05 11:15:03 [DEBUG] Processing admin login
+2025-06-05 11:15:03 [DEBUG] Checking admin credentials for ID: admin
+2025-06-05 11:15:03 [DEBUG] Admin login successful for ID: admin
+2025-06-05 11:15:03 [DEBUG] Closing database connection
+2025-06-05 11:15:03 [DEBUG] Sending response: {"status":"success","message":"Login admin berhasil","redirect":"admin_dashboard.php"}
+2025-06-05 11:15:03 [DEBUG] Admin dashboard script started
+2025-06-05 11:15:03 [DEBUG] Database connected successfully
+2025-06-05 11:15:14 [DEBUG] Admin dashboard script started
+2025-06-05 11:15:14 [DEBUG] Database connected successfully
+2025-06-05 11:15:21 [DEBUG] Admin dashboard script started
+2025-06-05 11:15:21 [DEBUG] Database connected successfully
+2025-06-05 11:15:21 [DEBUG] Processing verify action for student_id: 10
+2025-06-05 11:15:21 [DEBUG] Status updated to Terverifikasi for student_id: 10
+2025-06-05 11:15:22 [DEBUG] Admin dashboard script started
+2025-06-05 11:15:22 [DEBUG] Database connected successfully
+2025-06-05 11:15:22 [DEBUG] Processing filter_verifikasi action with status: Semua Status
+2025-06-07 06:48:05 [DEBUG] Script started
+2025-06-07 06:48:05 [DEBUG] Serving HTML for GET request
+2025-06-07 07:00:25 [DEBUG] Script started
+2025-06-07 07:00:25 [DEBUG] Serving HTML for GET request
+2025-06-07 07:03:36 [DEBUG] Script started
+2025-06-07 07:03:36 [DEBUG] Serving HTML for GET request
+2025-06-07 07:07:35 [DEBUG] Script started
+2025-06-07 07:07:35 [DEBUG] Serving HTML for GET request
+2025-06-07 07:08:13 [DEBUG] Script started
+2025-06-07 07:08:13 [DEBUG] Serving HTML for GET request
+2025-06-07 08:14:48 [DEBUG] Script started
+2025-06-07 08:14:48 [DEBUG] Serving HTML for GET request
+2025-06-07 08:15:25 [DEBUG] Script started
+2025-06-07 08:15:25 [DEBUG] Processing POST request
+2025-06-07 08:15:25 [DEBUG] Attempting database connection
+2025-06-07 08:15:25 [DEBUG] Database connected successfully
+2025-06-07 08:15:25 [DEBUG] Processing admin login
+2025-06-07 08:15:25 [DEBUG] Checking admin credentials for ID: admin
+2025-06-07 08:15:25 [DEBUG] Admin login successful for ID: admin
+2025-06-07 08:15:25 [DEBUG] Closing database connection
+2025-06-07 08:15:25 [DEBUG] Sending response: {"status":"success","message":"Login admin berhasil","redirect":"admin_dashboard.php"}
+2025-06-07 08:15:26 [DEBUG] Admin dashboard script started
+2025-06-07 08:15:26 [DEBUG] Database connected successfully
+2025-06-07 08:15:53 [DEBUG] Script started
+2025-06-07 08:15:53 [DEBUG] Redirecting logged-in user, user_type: admin
+2025-06-07 08:15:53 [DEBUG] Admin dashboard script started
+2025-06-07 08:15:53 [DEBUG] Database connected successfully

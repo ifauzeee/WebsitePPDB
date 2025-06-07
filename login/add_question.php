@@ -12,6 +12,11 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     exit;
 }
 
+// Generate CSRF token if not exists
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Database connection
 $servername = "localhost";
 $username = "root";
@@ -21,39 +26,66 @@ $dbname = "stm_gotham";
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     $_SESSION['error'] = "Koneksi database gagal.";
+    error_log("Database connection failed: " . $conn->connect_error);
     header("Location: exam_management.php");
     exit;
 }
 
+// Function to sanitize input
+function sanitize($input) {
+    return htmlspecialchars(strip_tags(trim($input)));
+}
+
 // Handle question addition
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $_SESSION['error'] = "Token CSRF tidak valid.";
+        header("Location: add_question.php");
+        exit;
+    }
+
     $major_id = (int)($_POST['major_id'] ?? 0);
-    $question_text = trim($_POST['question_text'] ?? '');
-    $option_a = trim($_POST['option_a'] ?? '');
-    $option_b = trim($_POST['option_b'] ?? '');
-    $option_c = trim($_POST['option_c'] ?? '');
-    $option_d = trim($_POST['option_d'] ?? '');
+    $question_text = sanitize($_POST['question_text'] ?? '');
+    $option_a = sanitize($_POST['option_a'] ?? '');
+    $option_b = sanitize($_POST['option_b'] ?? '');
+    $option_c = sanitize($_POST['option_c'] ?? '');
+    $option_d = sanitize($_POST['option_d'] ?? '');
     $correct_answer = strtoupper(trim($_POST['correct_answer'] ?? ''));
 
     // Validate inputs
     $errors = [];
     if ($major_id <= 0) {
         $errors[] = "Jurusan tidak valid.";
+    } else {
+        // Check if major_id exists in majors table
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM majors WHERE id = ?");
+        $stmt->bind_param("i", $major_id);
+        $stmt->execute();
+        $stmt->bind_result($count);
+        $stmt->fetch();
+        $stmt->close();
+        if ($count == 0) {
+            $errors[] = "Jurusan tidak ditemukan.";
+        }
     }
     if (empty($question_text)) {
         $errors[] = "Teks soal harus diisi.";
     }
-    if (empty($option_a)) {
-        $errors[] = "Pilihan A harus diisi.";
+    if (strlen($question_text) > 65535) {
+        $errors[] = "Teks soal terlalu panjang.";
     }
-    if (empty($option_b)) {
-        $errors[] = "Pilihan B harus diisi.";
+    if (empty($option_a) || strlen($option_a) > 255) {
+        $errors[] = "Pilihan A harus diisi dan kurang dari 255 karakter.";
     }
-    if (empty($option_c)) {
-        $errors[] = "Pilihan C harus diisi.";
+    if (empty($option_b) || strlen($option_b) > 255) {
+        $errors[] = "Pilihan B harus diisi dan kurang dari 255 karakter.";
     }
-    if (empty($option_d)) {
-        $errors[] = "Pilihan D harus diisi.";
+    if (empty($option_c) || strlen($option_c) > 255) {
+        $errors[] = "Pilihan C harus diisi dan kurang dari 255 karakter.";
+    }
+    if (empty($option_d) || strlen($option_d) > 255) {
+        $errors[] = "Pilihan D harus diisi dan kurang dari 255 karakter.";
     }
     if (!in_array($correct_answer, ['A', 'B', 'C', 'D'])) {
         $errors[] = "Jawaban benar harus A, B, C, atau D.";
@@ -61,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
 
     if (!empty($errors)) {
         $_SESSION['error'] = implode(" ", $errors);
+        error_log("Validation errors: " . implode(", ", $errors));
     } else {
         $sql = "INSERT INTO questions (major_id, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
@@ -68,8 +101,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
         
         if ($stmt->execute()) {
             $_SESSION['success'] = "Soal berhasil ditambahkan.";
+            error_log("Question added: id=" . $conn->insert_id . ", major_id=$major_id, question_text=$question_text");
         } else {
             $_SESSION['error'] = "Gagal menambahkan soal: " . $conn->error;
+            error_log("Failed to add question: " . $conn->error);
         }
         $stmt->close();
     }
@@ -79,6 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
 
 // Handle question deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_question'])) {
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $_SESSION['error'] = "Token CSRF tidak valid.";
+        header("Location: add_question.php");
+        exit;
+    }
+
     $question_id = (int)($_POST['question_id'] ?? 0);
     if ($question_id <= 0) {
         $_SESSION['error'] = "ID soal tidak valid.";
@@ -90,11 +132,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_question'])) {
         if ($stmt->execute()) {
             if ($stmt->affected_rows > 0) {
                 $_SESSION['success'] = "Soal berhasil dihapus.";
+                error_log("Question deleted: id=$question_id");
             } else {
                 $_SESSION['error'] = "Soal tidak ditemukan.";
             }
         } else {
             $_SESSION['error'] = "Gagal menghapus soal: " . $conn->error;
+            error_log("Failed to delete question: " . $conn->error);
         }
         $stmt->close();
     }
@@ -107,13 +151,33 @@ $sql = "SELECT id, name FROM majors ORDER BY name ASC";
 $result = $conn->query($sql);
 $majors = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 
-// Fetch all questions
+// Fetch questions with pagination
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$perPage = 25;
+$offset = ($page - 1) * $perPage;
+
+// Get sort order (default to id DESC)
+$sort = isset($_GET['sort']) && in_array($_GET['sort'], ['id', 'created_at']) ? $_GET['sort'] : 'id';
+$order = isset($_GET['order']) && in_array($_GET['order'], ['ASC', 'DESC']) ? $_GET['order'] : 'DESC';
+
+// Get total number of questions for pagination
+$sql = "SELECT COUNT(*) FROM questions";
+$result = $conn->query($sql);
+$totalQuestions = $result ? $result->fetch_row()[0] : 0;
+$totalPages = ceil($totalQuestions / $perPage);
+
+// Fetch questions
 $sql = "SELECT q.id, q.question_text, q.major_id, m.name AS major_name 
         FROM questions q 
         LEFT JOIN majors m ON q.major_id = m.id 
-        ORDER BY q.id DESC";
-$result = $conn->query($sql);
-$questions = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+        ORDER BY q.$sort $order LIMIT ? OFFSET ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("ii", $perPage, $offset);
+$stmt->execute();
+$result = $stmt->get_result();
+$questions = $result->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+error_log("Fetched questions: page=$page, sort=$sort, order=$order, count=" . count($questions));
 
 $conn->close();
 ?>
@@ -198,7 +262,7 @@ $conn->close();
         }
         
         #add-question-form.visible {
-            max-height: 1000px; /* Adjust based on form height */
+            max-height: 1000px;
             opacity: 1;
         }
         
@@ -244,8 +308,35 @@ $conn->close();
             }
         }
 
-        // Show form automatically if there's an error
-        window.addEventListener('load', () => {
+        // Client-side validation
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('#add-question-form form');
+            form.addEventListener('submit', (e) => {
+                const questionText = document.getElementById('question_text').value;
+                const optionA = document.getElementById('option_a').value;
+                const optionB = document.getElementById('option_b').value;
+                const optionC = document.getElementById('option_c').value;
+                const optionD = document.getElementById('option_d').value;
+                const majorId = document.getElementById('major_id').value;
+
+                if (!questionText) {
+                    e.preventDefault();
+                    Swal.fire('Error', 'Teks soal harus diisi.', 'error');
+                    return;
+                }
+                if (!optionA || !optionB || !optionC || !optionD) {
+                    e.preventDefault();
+                    Swal.fire('Error', 'Semua pilihan jawaban harus diisi.', 'error');
+                    return;
+                }
+                if (!majorId) {
+                    e.preventDefault();
+                    Swal.fire('Error', 'Jurusan harus dipilih.', 'error');
+                    return;
+                }
+            });
+
+            // Show form automatically if there's an error
             <?php if (isset($_SESSION['error'])): ?>
                 document.getElementById('add-question-form').classList.add('visible');
                 const button = document.getElementById('toggle-form-btn');
@@ -342,9 +433,11 @@ $conn->close();
             <div id="add-question-form" class="space-y-4">
                 <form action="" method="post" class="space-y-4">
                     <input type="hidden" name="add_question" value="1">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div>
                         <label for="major_id" class="block text-sm font-medium">Jurusan</label>
-                        <select id="major_id" name="major_id" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select id="major_id" name="major_id" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="">Pilih Jurusan</option>
                             <?php foreach ($majors as $major): ?>
                                 <option value="<?php echo $major['id']; ?>"><?php echo htmlspecialchars($major['name']); ?></option>
                             <?php endforeach; ?>
@@ -356,23 +449,23 @@ $conn->close();
                     </div>
                     <div>
                         <label for="option_a" class="block text-sm font-medium">Pilihan A</label>
-                        <input type="text" id="option_a" name="option_a" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <input type="text" id="option_a" name="option_a" maxlength="255" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div>
                         <label for="option_b" class="block text-sm font-medium">Pilihan B</label>
-                        <input type="text" id="option_b" name="option_b" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <input type="text" id="option_b" name="option_b" maxlength="255" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div>
                         <label for="option_c" class="block text-sm font-medium">Pilihan C</label>
-                        <input type="text" id="option_c" name="option_c" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <input type="text" id="option_c" name="option_c" maxlength="255" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div>
                         <label for="option_d" class="block text-sm font-medium">Pilihan D</label>
-                        <input type="text" id="option_d" name="option_d" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <input type="text" id="option_d" name="option_d" maxlength="255" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div>
                         <label for="correct_answer" class="block text-sm font-medium">Jawaban Benar</label>
-                        <select id="correct_answer" name="correct_answer" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select id="correct_answer" name="correct_answer" class="mt-1 block w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500" required>
                             <option value="A">A</option>
                             <option value="B">B</option>
                             <option value="C">C</option>
@@ -390,6 +483,19 @@ $conn->close();
         <!-- List of Questions -->
         <div class="card p-6 slide-in">
             <h2 class="text-xl font-semibold mb-4">Daftar Soal</h2>
+            <p class="text-gray-400 text-sm mb-4">Catatan: Nomor soal ditampilkan secara berurutan untuk setiap halaman. ID asli di database mungkin memiliki celah karena penghapusan data.</p>
+            <!-- Sort Options -->
+            <div class="mb-4 flex space-x-2">
+                <label for="sort" class="text-sm font-medium">Urutkan berdasarkan:</label>
+                <select id="sort" onchange="window.location.href='?page=1&sort=' + this.value + '&order=' + document.getElementById('order').value;" class="bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2">
+                    <option value="id" <?php echo $sort === 'id' ? 'selected' : ''; ?>>ID</option>
+                    <option value="created_at" <?php echo $sort === 'created_at' ? 'selected' : ''; ?>>Tanggal Dibuat</option>
+                </select>
+                <select id="order" onchange="window.location.href='?page=1&sort=' + document.getElementById('sort').value + '&order=' + this.value;" class="bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2">
+                    <option value="DESC" <?php echo $order === 'DESC' ? 'selected' : ''; ?>>Terbaru</option>
+                    <option value="ASC" <?php echo $order === 'ASC' ? 'selected' : ''; ?>>Terlama</option>
+                </select>
+            </div>
             <?php if (empty($questions)): ?>
                 <div class="bg-gray-800 p-8 rounded-lg text-center">
                     <i class="fas fa-question-circle text-5xl text-gray-500 mb-4"></i>
@@ -400,16 +506,17 @@ $conn->close();
                     <table class="w-full text-left">
                         <thead class="table-header">
                             <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-300">ID</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-gray-300">No.</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-gray-300">Teks Soal</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-gray-300">Jurusan</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-gray-300">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
+                            <?php $row_number = ($page - 1) * $perPage + 1; ?>
                             <?php foreach ($questions as $question): ?>
                                 <tr class="table-row border-b border-gray-700">
-                                    <td class="px-4 py-3 text-sm"><?php echo str_pad($question['id'], 5, '0', STR_PAD_LEFT); ?></td>
+                                    <td class="px-4 py-3 text-sm"><?php echo str_pad($row_number++, 5, '0', STR_PAD_LEFT); ?></td>
                                     <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars(substr($question['question_text'], 0, 50)); ?>...</td>
                                     <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars($question['major_name'] ?? 'N/A'); ?></td>
                                     <td class="px-4 py-3 text-sm flex space-x-2">
@@ -422,6 +529,7 @@ $conn->close();
                                         <form id="delete-form-<?php echo $question['id']; ?>" action="" method="post" class="inline">
                                             <input type="hidden" name="delete_question" value="1">
                                             <input type="hidden" name="question_id" value="<?php echo $question['id']; ?>">
+                                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                                             <button type="button" onclick="confirmDelete(<?php echo $question['id']; ?>)" class="action-btn px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm flex items-center">
                                                 <i class="fas fa-trash mr-2"></i> Hapus
                                             </button>
@@ -430,7 +538,17 @@ $conn->close();
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
-                    </table>
+                            </table>
+                </div>
+                <!-- Pagination Controls -->
+                <div class="flex justify-between mt-4">
+                    <a href="?page=<?php echo max(1, $page - 1); ?>&sort=<?php echo $sort; ?>&order=<?php echo $order; ?>" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition <?php echo $page <= 1 ? 'opacity-50 cursor-not-allowed' : ''; ?>">
+                        Sebelumnya
+                    </a>
+                    <span class="text-gray-300">Halaman <?php echo $page; ?> dari <?php echo $totalPages; ?></span>
+                    <a href="?page=<?php echo $page + 1; ?>&sort=<?php echo $sort; ?>&order=<?php echo $order; ?>" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition <?php echo $page >= $totalPages ? 'opacity-50 cursor-not-allowed' : ''; ?>">
+                        Selanjutnya
+                    </a>
                 </div>
             <?php endif; ?>
         </div>

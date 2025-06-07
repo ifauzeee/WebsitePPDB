@@ -68,24 +68,34 @@ $conn->close();
 
 // Function to get timeline dot class
 function getTimelineDotClass($status) {
-    return match($status) {
-        'Terverifikasi' => 'bg-blue-900',
-        'Menunggu Verifikasi' => 'bg-yellow-900',
-        'Ditolak' => 'bg-red-900',
-        'Diterima' => 'bg-green-900',
-        default => 'bg-gray-700'
-    };
+    switch ($status) {
+        case 'Terverifikasi':
+            return 'bg-blue-900';
+        case 'Menunggu Verifikasi':
+            return 'bg-yellow-900';
+        case 'Ditolak':
+            return 'bg-red-900';
+        case 'Diterima':
+            return 'bg-green-900';
+        default:
+            return 'bg-gray-700';
+    }
 }
 
 // Function to get status icon
 function getStatusIcon($status) {
-    return match($status) {
-        'Terverifikasi' => 'fa-check-circle',
-        'Menunggu Verifikasi' => 'fa-clock',
-        'Ditolak' => 'fa-times-circle',
-        'Diterima' => 'fa-graduation-cap',
-        default => 'fa-question-circle'
-    };
+    switch ($status) {
+        case 'Terverifikasi':
+            return 'fa-check-circle';
+        case 'Menunggu Verifikasi':
+            return 'fa-clock';
+        case 'Ditolak':
+            return 'fa-times-circle';
+        case 'Diterima':
+            return 'fa-graduation-cap';
+        default:
+            return 'fa-question-circle';
+    }
 }
 ?>
 
@@ -591,6 +601,19 @@ function getStatusIcon($status) {
                         </div>
                     </div>
                     
+                    <!-- Notifikasi jika dokumen belum diupload -->
+                    <?php if (empty($student_documents) && $student['status'] !== 'Ditolak'): ?>
+                        <div class="bg-yellow-900 bg-opacity-20 border border-yellow-600 border-opacity-20 rounded-lg p-4 text-yellow-100 mb-6 slide-in flex items-center justify-between">
+                            <div>
+                                <i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>
+                                Anda belum mengunggah dokumen persyaratan. Harap segera lengkapi dokumen Anda untuk melanjutkan proses pendaftaran.
+                            </div>
+                            <a href="students_documents.php" class="ml-4 btn bg-blue-700 hover:bg-blue-800 text-white">
+                                <i class="fas fa-upload mr-2"></i> Upload Dokumen
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    
                     <!-- Registration Status -->
                     <div class="card p-6 mb-6 slide-in">
                         <div class="flex items-center space-x-4 mb-4">
@@ -683,19 +706,6 @@ function getStatusIcon($status) {
                                 <div class="bg-green-900 bg-opacity-20 border border-green-600 border-opacity-20 rounded-lg p-4 text-green-100 mb-6 slide-in">
                                     <i class="fas fa-check-circle mr-2 text-green-400"></i>
                                     Selamat! Admin telah mengizinkan Anda untuk mengikuti ujian.
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Notifikasi jika dokumen belum diupload -->
-                            <?php if (empty($student_documents)): ?>
-                                <div class="bg-yellow-900 bg-opacity-20 border border-yellow-600 border-opacity-20 rounded-lg p-4 text-yellow-100 mb-6 slide-in flex items-center justify-between">
-                                    <div>
-                                        <i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>
-                                        Anda belum mengunggah dokumen persyaratan. Harap segera lengkapi dokumen Anda untuk melanjutkan proses pendaftaran.
-                                    </div>
-                                    <a href="students_documents.php" class="ml-4 btn bg-blue-700 hover:bg-blue-800 text-white">
-                                        <i class="fas fa-upload mr-2"></i> Upload Dokumen
-                                    </a>
                                 </div>
                             <?php endif; ?>
 

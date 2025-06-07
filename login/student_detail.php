@@ -231,35 +231,48 @@ function formatTanggalIndonesia($tanggal) {
 
 // Status badge class
 function getStatusBadgeClass($status) {
-    return match($status) {
-        'Terverifikasi' => 'bg-blue-900 text-blue-300',
-        'Menunggu Verifikasi' => 'bg-yellow-900 text-yellow-300',
-        'Ditolak' => 'bg-red-900 text-red-300',
-        'Diterima' => 'bg-green-900 text-green-300',
-        default => 'bg-gray-700 text-gray-300'
-    };
+    switch ($status) {
+        case 'Terverifikasi':
+            return 'bg-blue-900 text-blue-300';
+        case 'Menunggu Verifikasi':
+            return 'bg-yellow-900 text-yellow-300';
+        case 'Ditolak':
+            return 'bg-red-900 text-red-300';
+        case 'Diterima':
+            return 'bg-green-900 text-green-300';
+        default:
+            return 'bg-gray-900 text-gray-300';
+    }
 }
 
-// Timeline dot class
 function getTimelineDotClass($status) {
-    return match($status) {
-        'Terverifikasi' => 'bg-blue-900',
-        'Menunggu Verifikasi' => 'bg-yellow-900',
-        'Ditolak' => 'bg-red-900',
-        'Diterima' => 'bg-green-900',
-        default => 'bg-gray-700'
-    };
+    switch ($status) {
+        case 'Terverifikasi':
+            return 'bg-blue-900';
+        case 'Menunggu Verifikasi':
+            return 'bg-yellow-900';
+        case 'Ditolak':
+            return 'bg-red-900';
+        case 'Diterima':
+            return 'bg-green-900';
+        default:
+            return 'bg-gray-900';
+    }
 }
 
-// Status icon
 function getStatusIcon($status) {
-    return match($status) {
-        'Terverifikasi' => 'fa-check-circle',
-        'Menunggu Verifikasi' => 'fa-clock',
-        'Ditolak' => 'fa-times-circle',
-        'Diterima' => 'fa-user-check',
-        default => 'fa-question-circle'
-    };
+    switch ($status) {
+        case 'Terverifikasi':
+            return 'fa-check-circle';
+        case 'Menunggu Verifikasi':
+            return 'fa-clock';
+        case 'Ditolak':
+            return 'fa-times-circle';
+        case 'Diterima':
+            return 'fa-user-check';
+        default:
+            return 'fa-question-circle';
+    }
 }
 ?>
 

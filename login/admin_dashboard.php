@@ -605,7 +605,7 @@ $conn->close();
                         <!-- Graph Card -->
                         <div class="dashboard-card">
                             <div class="flex justify-between items-center mb-4">
-                                <h5 class="font-bold text-lg">Trend Pendaftaran Bulanan</h5>
+                                <h5 class="font-bold text-lg">Trend Pendaftaran</h5>
                                 <div class="flex space-x-2">
                                     <button class="px-3 py-1 text-sm bg-blue-900 text-blue-400 rounded-md hover:bg-blue-800">Harian</button>
                                     <button class="px-3 py-1 text-sm bg-gray-700 text-gray-400 rounded-md hover:bg-gray-600">Mingguan</button>
@@ -677,13 +677,23 @@ $conn->close();
                                 if ($result_all->num_rows > 0) {
                                     $nomor = 1;
                                     while ($row = $result_all->fetch_assoc()) {
-                                        $status_class = match ($row['status']) {
-                                            'Terverifikasi' => 'bg-green-900 text-green-400',
-                                            'Diterima' => 'bg-blue-900 text-blue-400',
-                                            'Ditolak' => 'bg-red-900 text-red-400',
-                                            'Menunggu Verifikasi' => 'bg-yellow-900 text-yellow-300',
-                                            default => 'bg-yellow-900 text-yellow-300',
-                                        };
+                                        switch ($row['status']) {
+                                            case 'Terverifikasi':
+                                                $status_class = 'bg-green-900 text-green-400';
+                                                break;
+                                            case 'Diterima':
+                                                $status_class = 'bg-blue-900 text-blue-400';
+                                                break;
+                                            case 'Ditolak':
+                                                $status_class = 'bg-red-900 text-red-400';
+                                                break;
+                                            case 'Menunggu Verifikasi':
+                                                $status_class = 'bg-yellow-900 text-yellow-300';
+                                                break;
+                                            default:
+                                                $status_class = 'bg-yellow-900 text-yellow-300';
+                                                break;
+                                        }
                                         $status_display = $row['status'] ?: 'Menunggu Verifikasi';
                                         $program_display = htmlspecialchars($row['program']);
                                         echo '<tr>';

@@ -412,9 +412,8 @@ session_start();
         </div>
     </nav>
 
-    <!-- Ganti section .hero-section menjadi banner fullscreen -->
+    <!-- Hero Section -->
     <section class="hero-section min-h-screen flex items-center justify-center" style="position:relative; overflow:hidden; padding:0;">
-        <!-- Animasi bubble -->
         <div id="bubble-bg" style="position:absolute; inset:0; z-index:0; pointer-events:none;"></div>
         <div class="container mx-auto px-4 hero-content text-center flex flex-col items-center justify-center" style="position:relative; z-index:2; min-height:100vh;">
             <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="w-32 h-32 mx-auto mb-8 animate-float">
@@ -769,7 +768,7 @@ session_start();
             <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
                 <div class="why-choose-card bg-white bg-opacity-10 p-8 rounded-xl text-center">
                     <i class="fas fa-laptop-code text-5xl mb-4 text-blue-400"></i>
-                    <h3 class="text-2mb-3">Kurikulum Modern</h3>
+                    <h3 class="text-2xl font-semibold mb-3">Kurikulum Modern</h3>
                     <p class="text-gray-300">Dirancang bersama industri untuk keterampilan yang relevan.</p>
                 </div>
                 <div class="why-choose-card bg-white bg-opacity-10 p-8 rounded-xl text-center">
@@ -927,7 +926,7 @@ session_start();
 
         // Form Validation
         function validateStep(step) {
-            console.log('Validating step:', step);
+            console.log(`Validating step ${step}`);
             let isValid = true;
             const inputs = document.querySelectorAll(`.step[data-step="${step}"] [required]`);
             inputs.forEach(input => {
@@ -936,12 +935,12 @@ session_start();
                     isValid = false;
                     input.classList.add('border-red-500');
                     if (errorMessage) errorMessage.style.display = 'block';
-                    console.log('Invalid input:', input.id);
+                    console.log(`Invalid input: ${input.id} is empty`);
                 } else if (input.pattern && !new RegExp(input.pattern).test(input.value)) {
                     isValid = false;
                     input.classList.add('border-red-500');
                     if (errorMessage) errorMessage.style.display = 'block';
-                    console.log('Pattern mismatch:', input.id);
+                    console.log(`Pattern mismatch for ${input.id}`);
                 } else {
                     input.classList.remove('border-red-500');
                     if (errorMessage) errorMessage.style.display = 'none';
@@ -970,7 +969,7 @@ session_start();
                 console.log('No major selected');
             }
 
-            console.log('Validation result:', isValid);
+            console.log(`Step ${step} validation result: ${isValid}`);
             return isValid;
         }
 
@@ -1028,7 +1027,12 @@ session_start();
             console.log('Form submission triggered');
 
             if (!validateStep(currentStep)) {
-                console.log('Validation failed for step:', currentStep);
+                console.log(`Validation failed for step ${currentStep}`);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validasi Gagal',
+                    text: 'Harap lengkapi semua kolom dengan benar sebelum mengirim.',
+                });
                 return;
             }
 
@@ -1043,14 +1047,10 @@ session_start();
                     method: 'POST',
                     body: formData
                 });
-                console.log('Fetch response status:', response.status);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
+                console.log(`Response status: ${response.status}`);
 
                 const result = await response.json();
-                console.log('Fetch result:', result);
+                console.log('Parsed JSON:', result);
 
                 if (result.success) {
                     Swal.fire({
