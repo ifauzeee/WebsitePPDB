@@ -109,7 +109,7 @@
         }
 
         .info-card:hover {
-            box-shadow: 0 15px 40px rgba piqu rgba(59, 130, 246, 0.2);
+            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2);
         }
 
         /* Button Styling */
@@ -398,40 +398,86 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
+            width: 80%;
             height: 100vh;
-            background: rgba(30, 58, 138, 0.98);
-            backdrop-filter: blur(8px);
+            background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
+            backdrop-filter: blur(12px);
             z-index: 1000;
             visibility: hidden;
             opacity: 0;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateX(-100%);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, visibility 0s linear 0.5s;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
         }
 
         .mobile-menu.active {
             visibility: visible;
             opacity: 1;
             transform: translateX(0);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, visibility 0s linear 0s;
         }
 
         .mobile-menu .close-btn {
             position: absolute;
-            top: 1rem;
-            right: 1rem;
+            top: 1.5rem;
+            right: 1.5rem;
             color: white;
-            font-size: 1.75rem;
-            padding: 0.5rem;
+            font-size: 2rem;
+            padding: 0.75rem;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s ease, color 0.3s ease;
         }
 
-        /* Mobile Menu Links Animation */
+        .mobile-menu .close-btn:hover {
+            transform: rotate(90deg);
+            color: #3b82f6;
+        }
+
+        .mobile-menu .menu-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 2rem;
+        }
+
         .mobile-menu a {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 500;
+            padding: 1rem 0;
+            width: 100%;
+            text-align: center;
             opacity: 0;
-            transform: translateX(-20px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-30px);
+            transition: opacity 0.4s ease, transform 0.4s ease, background 0.3s ease;
             transition-delay: calc(0.1s * var(--index));
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .mobile-menu a::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 0;
+            height: 2px;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+
+        .mobile-menu a:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .mobile-menu a:hover::before {
+            width: 100%;
         }
 
         .mobile-menu.active a {
@@ -439,60 +485,71 @@
             transform: translateX(0);
         }
 
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+        }
+
+        .mobile-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s ease, visibility 0s linear 0s;
+        }
+
         /* Mobile-Specific Styles */
         @media (max-width: 768px) {
-            /* Navigation */
             .mobile-menu {
-                padding-top: 4rem;
-                background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
-            }
-            
-            .mobile-menu a {
-                font-size: 1.2rem;
-                padding: 1rem 2rem;
-                display: block;
-                text-align: center;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                width: 85%;
+                padding-top: 5rem;
             }
 
-            /* Hero Section */
+            .mobile-menu a {
+                font-size: 1.3rem;
+                padding: 0.8rem 0;
+            }
+
             .hero-section {
                 min-height: 90vh;
                 padding: 6rem 1rem 2rem 1rem;
             }
-            
+
             .hero-section h1 {
                 font-size: 2.2rem;
                 line-height: 1.3;
             }
 
-            /* Content Sections */
             section {
                 padding: 3rem 1rem;
             }
-            
+
             .section-heading {
                 font-size: 2rem;
                 margin-bottom: 1.5rem;
             }
 
-            /* Cards */
             .feature-card,
             .info-card {
                 margin: 0.5rem 0;
                 padding: 1.25rem;
             }
-            
+
             .feature-card h3 {
                 font-size: 1.2rem;
             }
 
-            /* Gallery & Alumni */
             .gallery-item,
             .alumni-item {
                 margin-bottom: 1.5rem;
             }
-            
+
             .gallery-overlay,
             .alumni-overlay {
                 position: static;
@@ -502,27 +559,25 @@
                 border-radius: 0 0 1rem 1rem;
             }
 
-            /* Alumni Specific Styles */
             .alumni-item img {
                 height: 200px;
                 object-fit: cover;
             }
-            
+
             .alumni-overlay h4 {
                 font-size: 1.1rem;
                 margin-bottom: 0.25rem;
             }
-            
+
             .alumni-overlay p {
                 font-size: 0.85rem;
                 margin-bottom: 0.5rem;
             }
-            
+
             .alumni-overlay .quote {
                 font-size: 0.8rem;
             }
 
-            /* FAQ Section */
             .faq-item {
                 background: white;
                 border-radius: 0.75rem;
@@ -563,22 +618,27 @@
             }
         }
 
-        /* Additional Small Screen Adjustments */
         @media (max-width: 375px) {
+            .mobile-menu {
+                width: 90%;
+            }
+
+            .mobile-menu a {
+                font-size: 1.1rem;
+            }
+
+            .mobile-menu .close-btn {
+                top: 1rem;
+                right: 1rem;
+                font-size: 1.75rem;
+            }
+
             .hero-section h1 {
                 font-size: 1.8rem;
             }
-            
+
             .section-heading {
                 font-size: 1.6rem;
-            }
-            
-            .mobile-bottom-nav {
-                padding: 0.5rem 0;
-            }
-            
-            .mobile-bottom-nav a {
-                font-size: 0.7rem;
             }
         }
     </style>
@@ -609,18 +669,19 @@
             </div>
         </div>
         <!-- Mobile Menu -->
+        <div id="mobile-menu-overlay" class="mobile-menu-overlay md:hidden"></div>
         <div id="mobile-menu" class="mobile-menu md:hidden">
             <button id="mobile-menu-close" class="close-btn">
                 <i class="fas fa-times"></i>
             </button>
-            <div class="container mx-auto px-4 py-8 flex flex-col space-y-4 items-center justify-center h-full">
-                <a href="#beranda" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Beranda</a>
-                <a href="#tentang" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Tentang</a>
-                <a href="#keunggulan" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Keunggulan</a>
-                <a href="#galeri" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Galeri</a>
-                <a href="#lokasi" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Lokasi</a>
-                <a href="login/login.php" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Login</a>
-                <a href="pendaftaran/pendaftaran.php" class="text-white hover:text-blue-200 transition-smooth py-2 text-lg font-medium">Pendaftaran</a>
+            <div class="menu-container">
+                <a href="#beranda" class="text-white">Beranda</a>
+                <a href="#tentang" class="text-white">Tentang</a>
+                <a href="#keunggulan" class="text-white">Keunggulan</a>
+                <a href="#galeri" class="text-white">Galeri</a>
+                <a href="#lokasi" class="text-white">Lokasi</a>
+                <a href="login/login.php" class="text-white">Login</a>
+                <a href="pendaftaran/pendaftaran.php" class="text-white">Pendaftaran</a>
             </div>
         </div>
     </nav>
@@ -1129,7 +1190,6 @@
         <footer class="footer">
             <div class="container mx-auto px-4 footer-content">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
-                    <!-- Logo and Description -->
                     <div class="animate-fadeInUp" style="animation-delay: 0.1s;">
                         <div class="flex items-center mb-6 footer-logo">
                             <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="mr-4">
@@ -1140,7 +1200,6 @@
                         </p>
                     </div>
                     
-                    <!-- Quick Links -->
                     <div class="animate-fadeInUp" style="animation-delay: 0.3s;">
                         <h4>Tautan Cepat</h4>
                         <ul class="space-y-3">
@@ -1153,7 +1212,6 @@
                         </ul>
                     </div>
                     
-                    <!-- Contact Info -->
                     <div class="animate-fadeInUp" style="animation-delay: 0.5s;">
                         <h4>Kontak Kami</h4>
                         <ul class="footer-contact space-y-3">
@@ -1172,7 +1230,6 @@
                         </ul>
                     </div>
                     
-                    <!-- Social Media -->
                     <div class="animate-fadeInUp" style="animation-delay: 0.7s;">
                         <h4>Ikuti Kami</h4>
                         <div class="flex space-x-4 footer-social">
@@ -1213,25 +1270,24 @@
                     scrollTopBtn.classList.remove('active');
                 }
             });
-            
+
             // Mobile menu toggle
             const mobileMenu = document.getElementById('mobile-menu');
+            const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
             const menuButton = document.getElementById('mobile-menu-button');
             const closeButton = document.getElementById('mobile-menu-close');
-            
-            // Add index to menu links for staggered animation
+
             document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
                 link.style.setProperty('--index', index);
             });
-            
+
             menuButton.addEventListener('click', () => {
                 mobileMenu.classList.add('active');
-                // Reset animations
+                mobileMenuOverlay.classList.add('active');
                 document.querySelectorAll('#mobile-menu a').forEach(link => {
                     link.style.opacity = '0';
-                    link.style.transform = 'translateX(-20px)';
+                    link.style.transform = 'translateX(-30px)';
                 });
-                // Trigger animations after a small delay
                 setTimeout(() => {
                     document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
                         link.style.opacity = '1';
@@ -1239,24 +1295,27 @@
                     });
                 }, 100);
             });
-            
+
             closeButton.addEventListener('click', () => {
                 document.querySelectorAll('#mobile-menu a').forEach(link => {
                     link.style.opacity = '0';
-                    link.style.transform = 'translateX(-20px)';
+                    link.style.transform = 'translateX(-30px)';
                 });
-                setTimeout(() => {
-                    mobileMenu.classList.remove('active');
-                }, 300);
+                mobileMenu.classList.remove('active');
+                mobileMenuOverlay.classList.remove('active');
             });
-            
-            // Close mobile menu when clicking a link
-            document.querySelectorAll('#mobile-menu a').forEach(link => {
-                link.addEventListener('click', () => {
+
+            document.querySelectorAll('#mobile-menu a, #mobile-menu-overlay').forEach(element => {
+                element.addEventListener('click', () => {
+                    document.querySelectorAll('#mobile-menu a').forEach(link => {
+                        link.style.opacity = '0';
+                        link.style.transform = 'translateX(-30px)';
+                    });
                     mobileMenu.classList.remove('active');
+                    mobileMenuOverlay.classList.remove('active');
                 });
             });
-            
+
             // Smooth scrolling for anchor links
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', (e) => {
@@ -1273,7 +1332,7 @@
                     }
                 });
             });
-            
+
             // Scroll to top button functionality
             document.getElementById('scrollTopBtn').addEventListener('click', () => {
                 window.scrollTo({
@@ -1281,7 +1340,7 @@
                     behavior: 'smooth'
                 });
             });
-            
+
             // Counter animation (run once per session)
             let countersAnimated = false;
             function animateCounters() {
@@ -1305,7 +1364,7 @@
                     updateCounter();
                 });
             }
-            
+
             // FAQ accordion functionality
             document.querySelectorAll('.faq-item').forEach(item => {
                 item.addEventListener('click', () => {
@@ -1327,28 +1386,6 @@
                 });
             });
 
-            // Mobile Bottom Navigation Active State
-            const mobileNavLinks = document.querySelectorAll('.mobile-bottom-nav a');
-            const sections = document.querySelectorAll('section[id]');
-
-            window.addEventListener('scroll', () => {
-                let current = '';
-                
-                sections.forEach(section => {
-                    const sectionTop = section.offsetTop;
-                    if (window.pageYOffset >= sectionTop - 60) {
-                        current = section.getAttribute('id');
-                    }
-                });
-                
-                mobileNavLinks.forEach(link => {
-                    link.classList.remove('active');
-                    if (link.getAttribute('href').includes(current)) {
-                        link.classList.add('active');
-                    }
-                });
-            });
-
             // Prevent Mobile Browser Address Bar Show/Hide Affect Layout
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -1357,31 +1394,6 @@
                 let vh = window.innerHeight * 0.01;
                 document.documentElement.style.setProperty('--vh', `${vh}px`);
             });
-
-            // Add Touch Swipe Support for Gallery
-            let touchstartX = 0;
-            let touchendX = 0;
-            const slider = document.querySelector('.gallery-container');
-
-            slider.addEventListener('touchstart', e => {
-                touchstartX = e.changedTouches[0].screenX;
-            });
-
-            slider.addEventListener('touchend', e => {
-                touchendX = e.changedTouches[0].screenX;
-                handleSwipe();
-            });
-
-            function handleSwipe() {
-                if (touchendX < touchstartX) {
-                    // Swipe left
-                    nextSlide();
-                }
-                if (touchendX > touchstartX) {
-                    // Swipe right
-                    previousSlide();
-                }
-            }
         </script>
     </body>
 </html>

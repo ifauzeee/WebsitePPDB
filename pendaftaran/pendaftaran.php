@@ -5,7 +5,7 @@ session_start();
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pendaftaran - STM Gotham City</title>
     <link rel="icon" href="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -336,6 +336,105 @@ session_start();
         .border-red-500 {
             border-color: #ef4444 !important;
         }
+        /* Mobile Menu Styles */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80%;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transform: translateX(-100%);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, visibility 0s linear 0.5s;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+        }
+        .mobile-menu.active {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(0);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, visibility 0s linear 0s;
+        }
+        .mobile-menu .close-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            color: white;
+            font-size: 2rem;
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+        .mobile-menu .close-btn:hover {
+            transform: rotate(90deg);
+            color: #3b82f6;
+        }
+        .mobile-menu .menu-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 2rem;
+        }
+        .mobile-menu a {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 500;
+            padding: 1rem 0;
+            width: 100%;
+            text-align: center;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: opacity 0.4s ease, transform 0.4s ease, background 0.3s ease;
+            transition-delay: calc(0.1s * var(--index));
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .mobile-menu a::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 0;
+            height: 2px;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .mobile-menu a:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+        .mobile-menu a:hover::before {
+            width: 100%;
+        }
+        .mobile-menu.active a {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+        }
+        .mobile-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s ease, visibility 0s linear 0s;
+        }
         @media (max-width: 768px) {
             .navbar-fixed {
                 background: rgba(15, 23, 42, 1);
@@ -362,6 +461,14 @@ session_start();
             .progress-label {
                 font-size: 0.8rem;
             }
+            .mobile-menu {
+                width: 85%;
+                padding-top: 5rem;
+            }
+            .mobile-menu a {
+                font-size: 1.3rem;
+                padding: 0.8rem 0;
+            }
         }
         @media (max-width: 640px) {
             .hero-section h1 {
@@ -370,6 +477,17 @@ session_start();
             .fab {
                 width: 3.5rem;
                 height: 3.5rem;
+            }
+            .mobile-menu {
+                width: 90%;
+            }
+            .mobile-menu a {
+                font-size: 1.1rem;
+            }
+            .mobile-menu .close-btn {
+                top: 1rem;
+                right: 1rem;
+                font-size: 1.75rem;
             }
         }
     </style>
@@ -399,15 +517,20 @@ session_start();
                 </button>
             </div>
         </div>
-        <div id="mobile-menu" class="md:hidden hidden bg-gray-900 transition-all duration-300">
-            <div class="container mx-auto px-4 py-6 flex flex-col space-y-5">
-                <a href="../index.html#beranda" class="text-white hover:text-blue-400 transition py-2 font-medium">Beranda</a>
-                <a href="../index.html#tentang" class="text-white hover:text-blue-400 transition py-2 font-medium">Tentang</a>
-                <a href="../index.html#keunggulan" class="text-white hover:text-blue-400 transition py-2 font-medium">Keunggulan</a>
-                <a href="../index.html#galeri" class="text-white hover:text-blue-400 transition py-2 font-medium">Galeri</a>
-                <a href="../index.html#lokasi" class="text-white hover:text-blue-400 transition py-2 font-medium">Lokasi</a>
-                <a href="../login/login.php" class="text-white hover:text-blue-400 transition py-2 font-medium">Login</a>
-                <a href="pendaftaran.php" class="text-white hover:text-blue-400 transition py-2 font-medium">Pendaftaran</a>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu-overlay" class="mobile-menu-overlay md:hidden"></div>
+        <div id="mobile-menu" class="mobile-menu md:hidden">
+            <button id="mobile-menu-close" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="menu-container">
+                <a href="../index.html#beranda" class="text-white">Beranda</a>
+                <a href="../index.html#tentang" class="text-white">Tentang</a>
+                <a href="../index.html#keunggulan" class="text-white">Keunggulan</a>
+                <a href="../index.html#galeri" class="text-white">Galeri</a>
+                <a href="../index.html#lokasi" class="text-white">Lokasi</a>
+                <a href="../login/login.php" class="text-white">Login</a>
+                <a href="pendaftaran.php" class="text-white">Pendaftaran</a>
             </div>
         </div>
     </nav>
@@ -840,8 +963,46 @@ session_start();
         // Mobile Menu Toggle
         const mobileMenuButton = document.getElementById('mobile-menu-button');
         const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+        const closeButton = document.getElementById('mobile-menu-close');
+
+        document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
+            link.style.setProperty('--index', index);
+        });
+
         mobileMenuButton.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
+            mobileMenu.classList.add('active');
+            mobileMenuOverlay.classList.add('active');
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.style.opacity = '0';
+                link.style.transform = 'translateX(-30px)';
+            });
+            setTimeout(() => {
+                document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
+                    link.style.opacity = '1';
+                    link.style.transform = 'translateX(0)';
+                });
+            }, 100);
+        });
+
+        closeButton.addEventListener('click', () => {
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.style.opacity = '0';
+                link.style.transform = 'translateX(-30px)';
+            });
+            mobileMenu.classList.remove('active');
+            mobileMenuOverlay.classList.remove('active');
+        });
+
+        document.querySelectorAll('#mobile-menu a, #mobile-menu-overlay').forEach(element => {
+            element.addEventListener('click', () => {
+                document.querySelectorAll('#mobile-menu a').forEach(link => {
+                    link.style.opacity = '0';
+                    link.style.transform = 'translateX(-30px)';
+                });
+                mobileMenu.classList.remove('active');
+                mobileMenuOverlay.classList.remove('active');
+            });
         });
 
         // Navbar Scroll Effect
