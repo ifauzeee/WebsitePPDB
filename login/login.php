@@ -1,83 +1,201 @@
+<?php
+session_start();
+
+// Enable error logging
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', 'php_errors.log');
+
+// Debug log function
+function debug_log($message) {
+    file_put_contents('php_errors.log', date('Y-m-d H:i:s') . " [DEBUG] $message\n", FILE_APPEND);
+}
+
+debug_log("Script started");
+
+// Check if already logged in
+if (isset($_SESSION['user_type']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    debug_log("Already logged in, user_type: " . $_SESSION['user_type']);
+    header('Content-Type: application/json');
+    if ($_SESSION['user_type'] === 'admin') {
+        echo json_encode(['status' => 'success', 'message' => 'Sudah login', 'redirect' => 'admin_dashboard.php']);
+    } elseif ($_SESSION['user_type'] === 'student') {
+        echo json_encode(['status' => 'success', 'message' => 'Sudah login', 'redirect' => 'student_dashboard.php']);
+    }
+    exit;
+}
+if (isset($_SESSION['user_type'])) {
+    debug_log("Redirecting logged-in user, user_type: " . $_SESSION['user_type']);
+    if ($_SESSION['user_type'] === 'admin') {
+        header("Location: admin_dashboard.php");
+        exit;
+    } elseif ($_SESSION['user_type'] === 'student') {
+        header("Location: student_dashboard.php");
+        exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    debug_log("Processing POST request");
+
+    // Koneksi ke database
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "stm_gotham";
+
+    debug_log("Attempting database connection");
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    if ($conn->connect_error) {
+        debug_log("Database connection failed: " . $conn->connect_error);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Koneksi database gagal: ' . $conn->connect_error]);
+        exit;
+    }
+    debug_log("Database connected successfully");
+
+    $response = ['status' => 'error', 'message' => 'Login gagal'];
+
+    if (isset($_POST['login_type']) && $_POST['login_type'] === 'student') {
+        debug_log("Processing student login");
+        $email = trim($_POST['student_email'] ?? '');
+        $password = trim($_POST['student_password'] ?? '');
+
+        // Validasi input
+        if (empty($email) || empty($password)) {
+            debug_log("Student login: Empty email or password");
+            $response['message'] = 'Email dan kata sandi harus diisi';
+        } else {
+            // Cek kredensial siswa dari tabel users
+            debug_log("Preparing student query for email: $email");
+            $sql = "SELECT user_id, email, password_hash FROM users WHERE email = ?";
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->bind_param("s", $email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                debug_log("Student query executed, rows: " . $result->num_rows);
+
+                if ($result->num_rows > 0) {
+                    $user = $result->fetch_assoc();
+                    if (password_verify($password, $user['password_hash'])) {
+                        debug_log("Student login successful for email: $email");
+                        $_SESSION['user_type'] = 'student';
+                        $_SESSION['user_id'] = $user['user_id'];
+                        $_SESSION['email'] = $email;
+                        $response = [
+                            'status' => 'success',
+                            'message' => 'Login siswa berhasil',
+                            'redirect' => 'student_dashboard.php'
+                        ];
+                    } else {
+                        debug_log("Student login failed: Incorrect password for email: $email");
+                        $response['message'] = 'Kata sandi salah';
+                    }
+                } else {
+                    debug_log("Student login failed: Email not found: $email");
+                    $response['message'] = 'Email tidak ditemukan';
+                }
+                $stmt->close();
+            } else {
+                debug_log("Student query preparation failed: " . $conn->error);
+                $response['message'] = 'Gagal menyiapkan query: ' . $conn->error;
+            }
+        }
+    } elseif (isset($_POST['login_type']) && $_POST['login_type'] === 'admin') {
+        debug_log("Processing admin login");
+        $admin_id = trim($_POST['admin_id'] ?? '');
+        $admin_password = trim($_POST['admin_password'] ?? '');
+
+        // Validasi input
+        if (empty($admin_id) || empty($admin_password)) {
+            debug_log("Admin login: Empty ID or password");
+            $response['message'] = 'ID dan kata sandi harus diisi';
+        } else {
+            // Cek kredensial admin dari tabel admins
+            debug_log("Checking admin credentials for ID: $admin_id");
+            $sql = "SELECT admin_id, password_hash FROM admins WHERE admin_id = ?";
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->bind_param("s", $admin_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                if ($result->num_rows > 0) {
+                    $admin = $result->fetch_assoc();
+                    if (password_verify($admin_password, $admin['password_hash'])) {
+                        debug_log("Admin login successful for ID: $admin_id");
+                        $_SESSION['user_type'] = 'admin';
+                        $_SESSION['admin_id'] = $admin_id;
+                        $response = [
+                            'status' => 'success',
+                            'message' => 'Login admin berhasil',
+                            'redirect' => 'admin_dashboard.php'
+                        ];
+                    } else {
+                        debug_log("Admin login failed: Incorrect password for ID: $admin_id");
+                        $response['message'] = 'ID atau kata sandi admin salah';
+                    }
+                } else {
+                    debug_log("Admin login failed: ID not found: $admin_id");
+                    $response['message'] = 'ID atau kata sandi admin salah';
+                }
+                $stmt->close();
+            } else {
+                debug_log("Admin query preparation failed: " . $conn->error);
+                $response['message'] = 'Gagal menyiapkan query: ' . $conn->error;
+            }
+        }
+    } else {
+        debug_log("Invalid login type");
+        $response['message'] = 'Tipe login tidak valid';
+    }
+
+    debug_log("Closing database connection");
+    $conn->close();
+    debug_log("Sending response: " . json_encode($response));
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit;
+}
+
+// Serve HTML untuk GET request
+debug_log("Serving HTML for GET request");
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>STM Gotham City</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - STM Gotham City</title>
     <link rel="icon" href="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* Base Styles */
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Montserrat', sans-serif;
             scroll-behavior: smooth;
-            overscroll-behavior: none;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow-x: hidden;
         }
-
-        /* Shared Transition Utility */
-        .transition-smooth {
-            transition: all 0.3s ease;
-        }
-
-        /* Custom Animations */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-50px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(50px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .animate-fadeInDown { animation: fadeInDown 0.8s ease-out forwards; }
-        .animate-fadeInUp { animation: fadeInUp 0.8s ease-out forwards; }
-        .animate-slideInLeft { animation: slideInLeft 0.8s ease-out forwards; }
-        .animate-slideInRight { animation: slideInRight 0.8s ease-out forwards; }
-        .animate-zoomIn { animation: zoomIn 0.8s ease-out forwards; }
-        .animate-pulse { animation: pulse 2s infinite; }
-
-        /* Navbar Styles */
         .navbar-fixed {
-            background-color: rgba(30, 58, 138, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
-
-        /* Hero Section */
         .hero-section {
-            background: url('https://wallpaperaccess.com/full/197287.jpg') no-repeat center center;
-            background-size: cover;
             position: relative;
             color: white;
             min-height: 100vh;
+            width: 100%;
             display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            background: linear-gradient(135deg, #1e3a8a, #1e40af, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientFlow 20s ease infinite;
+            overflow: hidden;
         }
-
         .hero-section::before {
             content: '';
             position: absolute;
@@ -85,1312 +203,459 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 100%);
-        }
-
-        /* Card Styling */
-        .feature-card {
-            background: white;
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.2);
-        }
-
-        .info-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .info-card:hover {
-            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2);
-        }
-
-        /* Button Styling */
-        .btn-hover-effect {
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Gallery Section */
-        .gallery-item {
-            overflow: hidden;
-            border-radius: 1rem;
-            position: relative;
-        }
-
-        .gallery-item img {
-            transition: transform 0.6s ease;
-        }
-
-        .gallery-item:hover img {
-            transform: scale(1.1);
-        }
-
-        .gallery-overlay {
-            position: absolute;
-            bottom: -100%;
-            left: 0;
-            right: 0;
-            background: rgba(59, 130, 246, 0.8);
-            padding: 1rem;
-            transition: all 0.4s ease;
-        }
-
-        .gallery-item:hover .gallery-overlay {
-            bottom: 0;
-        }
-
-        /* FAQ Section */
-        .faq-item {
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            border-left: 4px solid transparent;
-            cursor: pointer;
-        }
-
-        .faq-item:hover {
-            border-left: 4px solid #3b82f6;
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
-        }
-
-        .faq-question {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            background: linear-gradient(to right, #eff6ff, #ffffff);
-            font-weight: 600;
-        }
-
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            padding: 0 1.5rem;
-            transition: max-height 0.3s ease, padding 0.3s ease;
-        }
-
-        .faq-item.active .faq-answer {
-            max-height: 200px;
-            padding: 1.5rem;
-        }
-
-        .faq-icon {
-            transition: transform 0.3s ease;
-        }
-
-        .faq-item.active .faq-icon {
-            transform: rotate(180deg);
-        }
-
-        /* Alumni Gallery Section */
-        .alumni-item {
-            position: relative;
-            overflow: hidden;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .alumni-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
-        }
-
-        .alumni-item img {
-            transition: transform 0.6s ease;
-        }
-
-        .alumni-item:hover img {
-            transform: scale(1.1);
-        }
-
-        .alumni-overlay {
-            position: absolute;
-            bottom: -100%;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(59, 130, 246, 0.9), rgba(59, 130, 246, 0.7));
-            padding: 1.5rem;
-            color: white;
-            transition: all 0.4s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .alumni-item:hover .alumni-overlay {
-            bottom: 0;
-        }
-
-        .alumni-overlay h4 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .alumni-overlay p {
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .alumni-overlay .quote {
-            font-style: italic;
-            opacity: 0.85;
-            font-size: 0.85rem;
-        }
-
-        /* Scroll to Top Button */
-        .scroll-top {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: #3b82f6;
-            color: white;
-            width: 3rem;
-            height: 3rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0;
-            z-index: 1000;
-            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
-        }
-
-        .scroll-top.active {
-            opacity: 1;
-        }
-
-        .scroll-top:hover {
-            background: #2563eb;
-            transform: translateY(-5px);
-        }
-
-        /* Footer Styles */
-        .footer {
-            background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
-            color: white;
-            padding: 4rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-            z-index: 0;
-        }
-
-        .footer-content {
-            position: relative;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.4));
             z-index: 1;
         }
-
-        .footer-logo img {
-            width: 64px;
-            height: 64px;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-        }
-
-        .footer-logo h3 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .footer-description {
-            color: #d1d5db;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            max-width: 280px;
-        }
-
-        .footer h4 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 1.5rem;
+        .hero-content {
             position: relative;
-        }
-
-        .footer h4::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -0.5rem;
-            width: 40px;
-            height: 2px;
-            background: #3b82f6;
-        }
-
-        .footer a {
-            color: #bfdbfe;
-            font-size: 0.9rem;
-        }
-
-        .footer a:hover {
-            color: #3b82f6;
-            transform: translateX(5px);
-            display: inline-block;
-        }
-
-        .footer ul li {
-            margin-bottom: 0.75rem;
-        }
-
-        .footer-contact li {
-            display: flex;
-            align-items: center;
-            color: #d1d5db;
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .footer-contact i {
-            color: #3b82f6;
-            margin-right: 0.75rem;
-            font-size: 1.1rem;
-        }
-
-        .footer-social a {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #1e40af;
-            border-radius: 50%;
-            color: white;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .footer-social a:hover {
-            background: #3b82f6;
-            transform: translateY(-4px);
-            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .footer-bottom {
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 2rem;
+            z-index: 2;
             text-align: center;
-            color: #9ca3af;
-            font-size: 0.85rem;
         }
-
-        /* Mobile Menu Styles */
-        .mobile-menu {
-            position: fixed;
+        .particles {
+            position: absolute;
             top: 0;
             left: 0;
-            width: 80%;
-            height: 100vh;
-            background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
-            backdrop-filter: blur(12px);
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            transform: translateX(-100%);
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, visibility 0s linear 0.5s;
-            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .mobile-menu.active {
-            visibility: visible;
-            opacity: 1;
-            transform: translateX(0);
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, visibility 0s linear 0s;
-        }
-
-        .mobile-menu .close-btn {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            color: white;
-            font-size: 2rem;
-            padding: 0.75rem;
-            cursor: pointer;
-            transition: transform 0.3s ease, color 0.3s ease;
-        }
-
-        .mobile-menu .close-btn:hover {
-            transform: rotate(90deg);
-            color: #3b82f6;
-        }
-
-        .mobile-menu .menu-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            width: 100%;
             height: 100%;
-            padding: 2rem;
+            overflow: hidden;
+            z-index: 1;
         }
-
-        .mobile-menu a {
-            color: white;
-            font-size: 1.5rem;
-            font-weight: 500;
-            padding: 1rem 0;
-            width: 100%;
-            text-align: center;
-            opacity: 0;
-            transform: translateX(-30px);
-            transition: opacity 0.4s ease, transform 0.4s ease, background 0.3s ease;
-            transition-delay: calc(0.1s * var(--index));
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: floatParticle 25s infinite ease-in-out;
+        }
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes floatParticle {
+            0% { transform: translateY(0) translateX(0); opacity: 0.6; }
+            50% { opacity: 0.2; }
+            100% { transform: translateY(-200vh) translateX(30px); opacity: 0; }
+        }
+        .form-container {
+            background: #1e293b;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            transition: transform 0.5s ease, box-shadow 0.5s ease;
+        }
+        .form-container:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 80px rgba(59, 130, 246, 0.4);
+        }
+        .form-input {
+            transition: all 0.3s ease;
+            border: 2px solid #475569;
             border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            padding: 0.75rem 1.25rem;
+            background: #0f172a;
+            color: #e2e8f0;
         }
-
-        .mobile-menu a::before {
+        .form-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+            outline: none;
+            background: #1e293b;
+        }
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+        .submit-btn {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            transition: all 0.4s ease;
+            padding: 0.75rem 2.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .submit-btn:hover {
+            background: linear-gradient(90deg, #1e40af, #3b82f6);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+        }
+        .tab {
+            cursor: pointer;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            color: #94a3b8;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            color: #e2e8f0;
+            border-bottom: 3px solid #3b82f6;
+        }
+        .tab:hover {
+            color: #e2e8f0;
+        }
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .animate-pulse-slow {
+            animation: pulse 5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
+        }
+        .navbar-link {
+            position: relative;
+            transition: color 0.4s ease;
+        }
+        .navbar-link::after {
             content: '';
             position: absolute;
+            bottom: -6px;
             left: 0;
-            bottom: 0;
             width: 0;
-            height: 2px;
+            height: 3px;
             background: #3b82f6;
-            transition: width 0.3s ease;
+            transition: width 0.4s ease;
         }
-
-        .mobile-menu a:hover {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3b82f6;
-        }
-
-        .mobile-menu a:hover::before {
+        .navbar-link:hover::after {
             width: 100%;
         }
-
-        .mobile-menu.active a {
-            opacity: 1;
-            transform: translateX(0);
+        .footer {
+            background: linear-gradient(135deg, #0f172a, #1e3a8a);
+            color: #e2e8f0;
+            padding: 5rem 0;
         }
-
-        .mobile-menu-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0s linear 0.5s;
-        }
-
-        .mobile-menu-overlay.active {
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.5s ease, visibility 0s linear 0s;
-        }
-
-        /* Mobile-Specific Styles */
         @media (max-width: 768px) {
-            .mobile-menu {
-                width: 85%;
-                padding-top: 5rem;
-            }
-
-            .mobile-menu a {
-                font-size: 1.3rem;
-                padding: 0.8rem 0;
-            }
-
             .hero-section {
-                min-height: 90vh;
-                padding: 6rem 1rem 2rem 1rem;
+                min-height: 100vh;
             }
-
             .hero-section h1 {
-                font-size: 2.2rem;
-                line-height: 1.3;
+                font-size: 3rem;
             }
-
-            section {
-                padding: 3rem 1rem;
+            .form-container {
+                padding: 2.5rem;
             }
-
-            .section-heading {
-                font-size: 2rem;
-                margin-bottom: 1.5rem;
-            }
-
-            .feature-card,
-            .info-card {
-                margin: 0.5rem 0;
-                padding: 1.25rem;
-            }
-
-            .feature-card h3 {
-                font-size: 1.2rem;
-            }
-
-            .gallery-item,
-            .alumni-item {
-                margin-bottom: 1.5rem;
-            }
-
-            .gallery-overlay,
-            .alumni-overlay {
-                position: static;
-                opacity: 1;
-                background: rgba(59, 130, 246, 0.9);
-                padding: 1rem;
-                border-radius: 0 0 1rem 1rem;
-            }
-
-            .alumni-item img {
-                height: 200px;
-                object-fit: cover;
-            }
-
-            .alumni-overlay h4 {
-                font-size: 1.1rem;
-                margin-bottom: 0.25rem;
-            }
-
-            .alumni-overlay p {
-                font-size: 0.85rem;
-                margin-bottom: 0.5rem;
-            }
-
-            .alumni-overlay .quote {
-                font-size: 0.8rem;
-            }
-
-            .faq-item {
-                background: white;
-                border-radius: 0.75rem;
-                margin-bottom: 1rem;
-                overflow: hidden;
-                border: 1px solid rgba(59, 130, 246, 0.1);
-            }
-
-            .faq-question {
-                padding: 1rem 1.5rem;
-                background: white;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: pointer;
-            }
-
-            .faq-answer {
-                max-height: 0;
-                overflow: hidden;
-                padding: 0 1.5rem;
-                opacity: 0;
-                transition: all 0.3s ease-out;
-            }
-
-            .faq-item.active .faq-answer {
-                max-height: 500px;
-                padding: 1rem 1.5rem;
-                opacity: 1;
-            }
-
-            .faq-icon {
-                transition: transform 0.3s ease;
-            }
-
-            .faq-item.active .faq-icon {
-                transform: rotate(180deg);
+            .tab {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.9rem;
             }
         }
-
-        @media (max-width: 375px) {
-            .mobile-menu {
-                width: 90%;
-            }
-
-            .mobile-menu a {
-                font-size: 1.1rem;
-            }
-
-            .mobile-menu .close-btn {
-                top: 1rem;
-                right: 1rem;
-                font-size: 1.75rem;
-            }
-
+        @media (max-width: 640px) {
             .hero-section h1 {
-                font-size: 1.8rem;
+                font-size: 2.5rem;
             }
-
-            .section-heading {
-                font-size: 1.6rem;
+            .hero-section p {
+                font-size: 1rem;
             }
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
+<body>
+    <!-- Navbar -->
     <nav id="navbar" class="fixed w-full top-0 z-50 transition-all duration-300 py-4">
         <div class="container mx-auto px-4 flex justify-between items-center">
-            <a href="#" class="flex items-center space-x-3">
-                <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center">
-                    <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="w-10 h-10 object-contain">
+            <a href="../index.html" class="flex items-center space-x-3">
+                <div class="w-14 h-14 rounded-full bg-white flex items-center justify-center">
+                    <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="w-12 h-12 object-contain">
                 </div>
-                <div class="text-white font-bold text-xl">STM Gotham City</div>
+                <div class="text-white font-bold text-2xl">STM Gotham City</div>
             </a>
-            <div class="hidden md:flex space-x-8 items-center">
-                <a href="#beranda" class="text-white hover:text-blue-200 transition-smooth">Beranda</a>
-                <a href="#tentang" class="text-white hover:text-blue-200 transition-smooth">Tentang</a>
-                <a href="#keunggulan" class="text-white hover:text-blue-200 transition-smooth">Keunggulan</a>
-                <a href="#galeri" class="text-white hover:text-blue-200 transition-smooth">Galeri</a>
-                <a href="#lokasi" class="text-white hover:text-blue-200 transition-smooth">Lokasi</a>
-                <a href="login/login.php" class="text-white hover:text-blue-200 transition-smooth">Login</a>
-                <a href="pendaftaran/pendaftaran.php" class="text-white hover:text-blue-200 transition-smooth">Pendaftaran</a>
+            <div class="hidden md:flex space-x-10 items-center">
+                <a href="../index.html#beranda" class="text-white navbar-link font-medium">Beranda</a>
+                <a href="../index.html#tentang" class="text-white navbar-link font-medium">Tentang</a>
+                <a href="../index.html#keunggulan" class="text-white navbar-link font-medium">Keunggulan</a>
+                <a href="../index.html#galeri" class="text-white navbar-link font-medium">Galeri</a>
+                <a href="../index.html#lokasi" class="text-white navbar-link font-medium">Lokasi</a>
+                <a href="login.php" class="text-white navbar-link font-medium">Login</a>
+                <a href="../pendaftaran/pendaftaran.php" class="text-white navbar-link font-medium">Pendaftaran</a>
             </div>
             <div class="md:hidden">
                 <button id="mobile-menu-button" class="text-white focus:outline-none">
-                    <i class="fas fa-bars text-2xl"></i>
+                    <i class="fas fa-bars text-3xl"></i>
                 </button>
             </div>
         </div>
-        <!-- Mobile Menu -->
-        <div id="mobile-menu-overlay" class="mobile-menu-overlay md:hidden"></div>
-        <div id="mobile-menu" class="mobile-menu md:hidden">
-            <button id="mobile-menu-close" class="close-btn">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="menu-container">
-                <a href="#beranda" class="text-white">Beranda</a>
-                <a href="#tentang" class="text-white">Tentang</a>
-                <a href="#keunggulan" class="text-white">Keunggulan</a>
-                <a href="#galeri" class="text-white">Galeri</a>
-                <a href="#lokasi" class="text-white">Lokasi</a>
-                <a href="login/login.php" class="text-white">Login</a>
-                <a href="pendaftaran/pendaftaran.php" class="text-white">Pendaftaran</a>
+        <div id="mobile-menu" class="md:hidden hidden bg-gray-900 transition-all duration-300">
+            <div class="container mx-auto px-4 py-6 flex flex-col space-y-5">
+                <a href="../index.html#beranda" class="text-white hover:text-blue-400 transition py-2 font-medium">Beranda</a>
+                <a href="../index.html#tentang" class="text-white hover:text-blue-400 transition py-2 font-medium">Tentang</a>
+                <a href="../index.html#keunggulan" class="text-white hover:text-blue-400 transition py-2 font-medium">Keunggulan</a>
+                <a href="../index.html#galeri" class="text-white hover:text-blue-400 transition py-2 font-medium">Galeri</a>
+                <a href="../index.html#lokasi" class="text-white hover:text-blue-400 transition py-2 font-medium">Lokasi</a>
+                <a href="login.php" class="text-white hover:text-blue-400 transition py-2 font-medium">Login</a>
+                <a href="../pendaftaran/pendaftaran.php" class="text-white hover:text-blue-400 transition py-2 font-medium">Pendaftaran</a>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <section id="beranda" class="hero-section">
-        <div class="container mx-auto px-4 relative z-10">
-            <div class="max-w-3xl">
-                <h1 class="text-5xl md:text-6xl font-bold mb-4 animate-fadeInDown" style="animation-delay: 0.2s;">
-                    Selamat Datang di <span class="text-blue-400">STM</span> Gotham City
-                </h1>
-                <p class="text-xl mb-8 opacity-90 animate-fadeInDown" style="animation-delay: 0.4s;">
-                    Inovasi, Teknologi, dan Prestasi
-                </p>
-                <div class="flex flex-wrap gap-4 animate-fadeInDown" style="animation-delay: 0.6s;">
-                    <a href="pendaftaran/pendaftaran.php" class="btn-hover-effect bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold transition-smooth hover:bg-blue-700 hover:shadow-lg animate-pulse">
-                        Daftar Sekarang
-                    </a>
-                    <a href="#tentang" class="btn-hover-effect bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold transition-smooth hover:bg-white hover:text-blue-900 animate-pulse">
-                        Pelajari Lebih Lanjut
-                    </a>
+    <section class="hero-section">
+        <div class="particles"></div>
+        <div class="hero-content">
+            <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="w-32 h-32 mx-auto mb-8 animate-float">
+            <h1 class="text-5xl md:text-7xl font-extrabold mb-4 animate-pulse-slow tracking-tight">Masuk Sekarang!</h1>
+            <p class="text-xl md:text-2xl opacity-90 max-w-3xl mx-auto mb-10 font-light">Akses akun Anda untuk mengelola pendaftaran atau memulai perjalanan pendidikan Anda di STM Gotham City.</p>
+            <button onclick="scrollToLogin()" class="submit-btn text-white">Login <i class="fas fa-sign-in-alt ml-2"></i></button>
+        </div>
+    </section>
+
+    <!-- Login Section -->
+    <section id="form" class="py-24">
+        <div class="container mx-auto px-4">
+            <div class="form-container max-w-lg mx-auto p-10">
+                <h2 class="text-4xl font-bold text-white mb-8 text-center tracking-wide">Login</h2>
+                <div class="flex justify-center mb-8">
+                    <div class="tab active" data-tab="student">Login Siswa</div>
+                    <div class="tab" data-tab="admin">Login Admin</div>
+                </div>
+
+                <!-- Student Login Form -->
+                <div class="tab-content active" id="student-login">
+                    <form id="studentLoginForm" method="POST">
+                        <input type="hidden" name="login_type" value="student">
+                        <div class="mb-6">
+                            <label for="student_email" class="block text-sm font-medium text-gray-300 mb-3">Email</label>
+                            <input type="email" id="student_email" name="student_email" class="form-input w-full" placeholder="Masukkan email" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="student_password" class="block text-sm font-medium text-gray-300 mb-3">Kata Sandi</label>
+                            <input type="password" id="student_password" name="student_password" class="form-input w-full" placeholder="Masukkan kata sandi" required>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="submit-btn text-white">Login Siswa <i class="fas fa-sign-in-alt ml-2"></i></button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Admin Login Form -->
+                <div class="tab-content" id="admin-login">
+                    <form id="adminLoginForm" method="POST">
+                        <input type="hidden" name="login_type" value="admin">
+                        <div class="mb-6">
+                            <label for="admin_id" class="block text-sm font-medium text-gray-300 mb-3">ID Admin</label>
+                            <input type="text" id="admin_id" name="admin_id" class="form-input w-full" placeholder="Masukkan ID admin" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="admin_password" class="block text-sm font-medium text-gray-300 mb-3">Kata Sandi</label>
+                            <input type="password" id="admin_password" name="admin_password" class="form-input w-full" placeholder="Masukkan kata sandi" required>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="submit-btn text-white">Login Admin <i class="fas fa-sign-in-alt ml-2"></i></button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Stats Counter Section -->
-    <section class="py-12 bg-blue-900 text-white transform hover:scale-100 transition-all duration-500 ease-in-out">
+    <!-- Footer -->
+    <footer class="footer">
         <div class="container mx-auto px-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                <div class="animate-pulse" style="animation-delay: 0.1s;">
-                    <div class="text-5xl font-bold mb-2">
-                        <span class="counter-value" data-target="200">100</span>+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-16">
+                <div>
+                    <div class="flex items-center mb-8">
+                        <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="mr-4 w-20 h-20">
+                        <h3 class="text-2xl font-bold">STM Gotham City</h3>
                     </div>
-                    <p class="text-lg opacity-80">Siswa Aktif</p>
+                    <p class="text-gray-400">Sekolah vokasi teknologi terdepan yang mempersiapkan siswa untuk masa depan industri modern.</p>
                 </div>
-                <div class="animate-fadeInUp" style="animation-delay: 0.3s;">
-                    <div class="text-5xl font-bold mb-2">
-                        <span class="counter-value" data-target="100">100</span>%
-                    </div>
-                    <p class="text-lg opacity-80">Kelulusan Industri & Perguruan Tinggi</p>
-                </div>
-                <div class="animate-fadeInUp" style="animation-delay: 0.5s;">
-                    <div class="text-5xl font-bold mb-2">
-                        <span class="counter-value" data-target="20">50</span>+
-                    </div>
-                    <p class="text-lg opacity-80">Ekstrakurikuler</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="tentang" class="py-24 bg-gray-50">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold text-gray-800 mb-4 animate-fadeInDown">Tentang Kami</h2>
-                <div class="w-24 h-1 bg-blue-600 mx-auto"></div>
-            </div>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                <div class="animate-slideInLeft">
-                    <div class="relative">
-                        <img src="https://wallpaperaccess.com/full/543188.jpg" alt="STM Gotham City" class="rounded-2xl shadow-xl w-full object-cover" loading="lazy">
-                        <div class="absolute -bottom-8 -right-8 bg-blue-600 text-white p-6 rounded-xl shadow-lg">
-                            <p class="text-xl font-semibold">Didirikan Sejak Abad ke 25</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="animate-slideInRight">
-                    <h3 class="text-3xl font-semibold text-gray-800 mb-6">Sekolah Teknologi Unggulan</h3>
-                    <p class="text-gray-600 leading-relaxed mb-6">
-                        STM Gotham City adalah sekolah menengah kejuruan yang berfokus pada teknologi dan inovasi. Berlokasi di Gotham City, kami menawarkan pendidikan vokasi yang mempersiapkan siswa untuk karir di industri teknologi modern.
-                    </p>
-                    <p class="text-gray-600 leading-relaxed mb-8">
-                        Dengan fasilitas canggih dan tenaga pengajar berpengalaman, kami membekali siswa dengan keterampilan praktis dan pengetahuan teoretis untuk menghadapi tantangan dunia kerja.
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="flex items-start animate-fadeInUp" style="animation-delay: 0.1s;">
-                            <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                <i class="fas fa-graduation-cap text-blue-600"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Pendidikan Teknologi</h4>
-                                <p class="text-gray-600 text-sm">Kurikulum berbasis industri</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start animate-fadeInUp" style="animation-delay: 0.3s;">
-                            <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                <i class="fas fa-users text-blue-600"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Pengajar Profesional</h4>
-                                <p class="text-gray-600 text-sm">Praktisi industri tersertifikasi</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start animate-fadeInUp" style="animation-delay: 0.5s;">
-                            <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                <i class="fas fa-laptop text-blue-600"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Fasilitas Modern</h4>
-                                <p class="text-gray-600 text-sm">Lab teknologi terkini</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start animate-fadeInUp" style="animation-delay: 0.7s;">
-                            <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                <i class="fas fa-medal text-blue-600"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Prestasi Teknologi</h4>
-                                <p class="text-gray-600 text-sm">Juara kompetisi nasional</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Visi Misi Section -->
-    <section class="py-24 bg-blue-900 text-white">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4 animate-fadeInDown">Visi & Misi</h2>
-                <div class="w-24 h-1 bg-white mx-auto"></div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                <div class="info-card bg-white text-gray-800 p-8 rounded-2xl shadow-xl animate-slideInLeft">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-blue-100 p-4 rounded-xl mr-4">
-                            <i class="fas fa-eye text-2xl text-blue-600"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold">Visi</h3>
-                    </div>
-                    <p class="text-gray-600 leading-relaxed">
-                        Menjadi sekolah vokasi teknologi terdepan yang menghasilkan lulusan kompeten dan inovatif.
-                    </p>
-                </div>
-                
-                <div class="info-card bg-white text-gray-800 p-8 rounded-2xl shadow-xl animate-slideInRight">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-blue-100 p-4 rounded-xl mr-4">
-                            <i class="fas fa-bullseye text-2xl text-blue-600"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold">Misi</h3>
-                    </div>
-                    <ul class="text-gray-600 space-y-3">
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
-                            <span>Menyediakan pendidikan vokasi berbasis teknologi tinggi.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
-                            <span>Meningkatkan keterampilan praktis melalui kerja sama industri.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
-                            <span>Mendorong inovasi melalui proyek teknologi siswa.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
-                            <span>Membangun karakter disiplin dan kreatif.</span>
-                        </li>
+                <div>
+                    <h4 class="text-xl font-semibold mb-6">Tautan Cepat</h4>
+                    <ul class="space-y-4">
+                        <li><a href="../index.html#beranda" class="text-gray-400 hover:text-blue-400 transition">Beranda</a></li>
+                        <li><a href="../index.html#tentang" class="text-gray-400 hover:text-blue-400 transition">Tentang</a></li>
+                        <li><a href="../index.html#keunggulan" class="text-gray-400 hover:text-blue-400 transition">Keunggulan</a></li>
+                        <li><a href="../index.html#faq" class="text-gray-400 hover:text-blue-400 transition">FAQ</a></li>
+                        <li><a href="../index.html#galeri" class="text-gray-400 hover:text-blue-400 transition">Galeri</a></li>
+                        <li><a href="../index.html#lokasi" class="text-gray-400 hover:text-blue-400 transition">Lokasi</a></li>
                     </ul>
                 </div>
-
-                <div class="info-card bg-white text-gray-800 p-8 rounded-2xl shadow-xl animate-fadeInUp">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-blue-100 p-4 rounded-xl mr-4">
-                            <i class="fas fa-chart-line text-2xl text-blue-600"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold">Indikator Keberhasilan</h3>
-                    </div>
-                    <ul class="text-gray-600 space-y-3">
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
-                            <span>Tingkat penyerapan lulusan di industri teknologi.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
-                            <span>Jumlah inovasi teknologi yang dihasilkan siswa.</span>
-                        </li>
+                <div>
+                    <h4 class="text-xl font-semibold mb-6">Kontak Kami</h4>
+                    <ul class="space-y-4">
+                        <li class="flex items-center"><i class="fas fa-map-marker-alt mr-3 text-blue-400"></i>Jl. Wayne Tower, Gotham City, London</li>
+                        <li class="flex items-center"><i class="fas fa-phone-alt mr-3 text-blue-400"></i>(021) 1234 5678</li>
+                        <li class="flex items-center"><i class="fas fa-envelope mr-3 text-blue-400"></i><a href="mailto:info@stmgotham.ac.id">info@stmgotham.ac.id</a></li>
                     </ul>
                 </div>
+                <div>
+                    <h4 class="text-xl font-semibold mb-6">Ikuti Kami</h4>
+                    <div class="flex space-x-5">
+                        <a href="#" class="bg-blue-900 w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition"><i class="fa-brands fa-facebook-f text-xl"></i></a>
+                        <a href="#" class="bg-blue-900 w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition"><i class="fa-brands fa-instagram text-xl"></i></a>
+                        <a href="#" class="bg-blue-900 w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition"><i class="fa-brands fa-twitter text-xl"></i></a>
+                        <a href="#" class="bg-blue-900 w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition"><i class="fa-brands fa-youtube text-xl"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-16 pt-8 text-center text-gray-400">
+                <p>© 2025 STM Gotham City. Hak Cipta Dilindungi.</p>
             </div>
         </div>
-    </section>
+    </footer>
 
-    <!-- Features/Keunggulan Section -->
-    <section id="keunggulan" class="py-24 bg-gray-50">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold text-gray-800 mb-4 animate-fadeInDown">Keunggulan Kami</h2>
-                <div class="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
-                <p class="text-gray-600 max-w-3xl mx-auto animate-fadeInUp">
-                    STM Gotham City menawarkan pendidikan vokasi teknologi yang unggul dan relevan dengan kebutuhan industri.
-                </p>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="feature-card animate-zoomIn" style="animation-delay: 0.1s;">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Akreditasi A</h3>
-                        <p class="text-gray-600">
-                            STM Gotham City telah terakreditasi A sejak 2015, menjamin kualitas pendidikan dan fasilitas.
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="feature-card animate-zoomIn" style="animation-delay: 0.3s;">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Kurikulum Berbasis Industri</h3>
-                        <p class="text-gray-600">
-                            Kurikulum dirancang bersama mitra industri untuk memastikan relevansi dengan kebutuhan pasar kerja.
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="feature-card animate-zoomIn" style="animation-delay: 0.5s;">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Fasilitas Teknologi Modern</h3>
-                        <p class="text-gray-600">
-                            Laboratorium komputer, workshop otomotif, dan studio multimedia yang lengkap.
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="feature-card animate-zoomIn" style="animation-delay: 0.7s;">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Kerja Sama Industri</h3>
-                        <p class="text-gray-600">
-                            Magang dan pelatihan langsung dengan perusahaan teknologi terkemuka.
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="feature-card animate-zoomIn" style="animation-delay: 0.9s;">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Pengembangan Soft Skills</h3>
-                        <p class="text-gray-600">
-                            Pelatihan kepemimpinan, kerja tim, dan komunikasi untuk membentuk profesional muda.
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="feature-card animate-zoomIn" style="animation-delay: 1.1s;">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Prestasi Teknologi</h3>
-                        <p class="text-gray-600">
-                            Siswa meraih juara dalam kompetisi robotik dan pemrograman tingkat nasional.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
+    <script>
+        // Tambahkan SweetAlert
+        const sweetAlertScript = document.createElement('script');
+        sweetAlertScript.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+        document.head.appendChild(sweetAlertScript);
 
-        <!-- Gallery Section -->
-        <section id="galeri" class="py-24 bg-white">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-4 animate-fadeInDown">Galeri Kegiatan</h2>
-                    <div class="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
-                    <p class="text-gray-600 max-w-3xl mx-auto animate-fadeInUp">
-                        Dokumentasi kegiatan dan prestasi di STM Gotham City
-                    </p>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="gallery-item animate-zoomIn" style="animation-delay: 0.1s;">
-                        <img src="https://smpbptahfidzattaubah.sch.id/media_library/posts/post-image-1690962011426.jpg" alt="Lomba Robotik" class="w-full h-64 object-cover" loading="lazy">
-                        <div class="gallery-overlay">
-                            <h4 class="text-white font-semibold">SENAM</h4>
-                            <p class="text-white text-sm opacity-90">Kegiatan rutin setiap Jumat untuk menjaga kebugaran dan kekompakan warga sekolah.</p>
-                        </div>
-                    </div>
-                    <div class="gallery-item animate-zoomIn" style="animation-delay: 0.2s;">
-                        <img src="https://awsimages.detik.net.id/community/media/visual/2022/05/17/walkot-mojokerto-ika-puspitasari-saat-upacara-pengibaran-bendera-merah-putih-untuk-memperingati-hari-pendidikan-nasional-hardi_169.jpeg?w=700&q=90" alt="Pelatihan Pemrograman" class="w-full h-64 object-cover" loading="lazy">
-                        <div class="gallery-overlay">
-                            <h4 class="text-white font-semibold">UPACARA BENDERA</h4>
-                            <p class="text-white text-sm opacity-90">Dilaksanakan setiap Senin sebagai bentuk kedisiplinan dan penghormatan kepada bangsa.</p>
-                        </div>
-                    </div>
-                    <div class="gallery-item animate-zoomIn" style="animation-delay: 0.3s;">
-                        <img src="https://smkdp1jkt.sch.id/wp-content/uploads/2019/07/PPKBN-7.jpeg" alt="Kunjungan Industri" class="w-full h-64 object-cover" loading="lazy">
-                        <div class="gallery-overlay">
-                            <h4 class="text-white font-semibold">SHALAT DHUHA BERJAMAAH</h4>
-                            <p class="text-white text-sm opacity-90">Menumbuhkan kebiasaan ibadah dan memperkuat karakter spiritual siswa.</p>
-                        </div>
-                    </div>
-                    <div class="gallery-item animate-zoomIn" style="animation-delay: 0.4s;">
-                        <img src="https://inikpop.com/wp-content/uploads/2018/01/fakta-warnet-di-korea-1.jpg" alt="Pameran Proyek" class="w-full h-64 object-cover" loading="lazy">
-                        <div class="gallery-overlay">
-                            <h4 class="text-white font-semibold">LAB KOMPUTER</h4>
-                            <p class="text-white text-sm opacity-90">Siswa belajar langsung menggunakan teknologi untuk mendukung keterampilan digital.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
 
-        <!-- FAQ Section -->
-        <section id="faq" class="py-24 bg-gray-50">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-4 animate-fadeInDown">Pertanyaan Umum (FAQ)</h2>
-                    <div class="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
-                    <p class="text-gray-600 max-w-3xl mx-auto animate-fadeInUp">
-                        Jawaban atas pertanyaan umum tentang STM Gotham City
-                    </p>
-                </div>
-                
-                <div class="space-y-6 max-w-4xl mx-auto">
-                    <div class="faq-item animate-slideInLeft" style="animation-delay: 0.1s;" role="button" tabindex="0" aria-expanded="false">
-                        <div class="faq-question">
-                            <h3 class="text-xl font-semibold text-gray-800">Apa saja jurusan yang tersedia di STM Gotham City?</h3>
-                            <i class="fas fa-chevron-down faq-icon text-blue-600"></i>
-                        </div>
-                        <div class="faq-answer text-gray-600">
-                            Kami menawarkan jurusan seperti Teknik Komputer dan Jaringan, Teknik Otomotif, dan Multimedia, yang semuanya berbasis industri.
-                        </div>
-                    </div>
-                    <div class="faq-item animate-slideInRight" style="animation-delay: 0.3s;" role="button" tabindex="0" aria-expanded="false">
-                        <div class="faq-question">
-                            <h3 class="text-xl font-semibold text-gray-800">Bagaimana proses pendaftaran?</h3>
-                            <i class="fas fa-chevron-down faq-icon text-blue-600"></i>
-                        </div>
-                        <div class="faq-answer text-gray-600">
-                            Pendaftaran dilakukan secara online melalui halaman pendaftaran kami. Persyaratan meliputi ijazah SMP, rapor, pas foto, dan kartu keluarga.
-                        </div>
-                    </div>
-                    <div class="faq-item animate-slideInLeft" style="animation-delay: 0.5s;" role="button" tabindex="0" aria-expanded="false">
-                        <div class="faq-question">
-                            <h3 class="text-xl font-semibold text-gray-800">Apakah ada beasiswa?</h3>
-                            <i class="fas fa-chevron-down faq-icon text-blue-600"></i>
-                        </div>
-                        <div class="faq-answer text-gray-600">
-                            Ya, kami menyediakan beasiswa untuk siswa berprestasi dan kurang mampu. Hubungi admin untuk informasi lebih lanjut.
-                        </div>
-                    </div>
-                    <div class="faq-item animate-slideInRight" style="animation-delay: 0.7s;" role="button" tabindex="0" aria-expanded="false">
-                        <div class="faq-question">
-                            <h3 class="text-xl font-semibold text-gray-800">Apa fasilitas yang tersedia?</h3>
-                            <i class="fas fa-chevron-down faq-icon text-blue-600"></i>
-                        </div>
-                        <div class="faq-answer text-gray-600">
-                            Kami memiliki laboratorium komputer, workshop otomotif, studio multimedia, dan perpustakaan modern.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Alumni Gallery Section -->
-        <section id="alumni" class="py-24 bg-white">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-4 animate-fadeInDown">Galeri Alumni</h2>
-                    <div class="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
-                    <p class="text-gray-600 max-w-3xl mx-auto animate-fadeInUp">
-                        Temui para alumni kami yang telah sukses di berbagai bidang teknologi
-                    </p>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="alumni-item animate-zoomIn" style="animation-delay: 0.1s;">
-                        <img src="https://wallpapercat.com/w/full/8/5/4/472061-2560x1705-desktop-hd-christian-bale-batman-wallpaper-image.jpg" alt="Budi Santoso" class="w-full h-80 object-contain bg-gray-100" loading="lazy">
-                        <div class="alumni-overlay">
-                            <h4 class="text-white">Christian Bale</h4>
-                            <p class="text-white">Alumni 2020, Software Engineer</p>
-                            <p class="quote text-white">"STM Gotham City membuka jalan bagi karir teknologi saya dengan keterampilan praktis."</p>
-                        </div>
-                    </div>
-                    <div class="alumni-item animate-zoomIn" style="animation-delay: 0.3s;">
-                        <img src="https://st5.depositphotos.com/70843308/61785/i/450/depositphotos_617858428-stock-photo-british-actor-henry-cavill-arrives.jpg" alt="Siti Aisyah" class="w-full h-80 object-contain bg-gray-100" loading="lazy">
-                        <div class="alumni-overlay">
-                            <h4 class="text-white">Henry Cavill</h4>
-                            <p class="text-white">Alumni 2021, Multimedia Designer</p>
-                            <p class="quote text-white">"Fasilitas modern di STM membantu saya mengasah kreativitas."</p>
-                        </div>
-                    </div>
-                    <div class="alumni-item animate-zoomIn" style="animation-delay: 0.5s;">
-                        <img src="https://cdn.antaranews.com/cache/1200x800/2019/09/06/Screenshot_2019-09-06-10-23-07-11-01-1024x683.jpeg" alt="Ahmad Fauzi" class="w-full h-80 object-contain bg-gray-100" loading="lazy">
-                        <div class="alumni-overlay">
-                            <h4 class="text-white">Tom Holland</h4>
-                            <p class="text-white">Alumni 2019, Automotive Technician</p>
-                            <p class="quote text-white">"Magang industri dari STM memberi saya pengalaman tak ternilai."</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Pendaftaran Section -->
-        <section id="pendaftaran" class="py-24 bg-blue-900 text-white">
-            <div class="container mx-auto px-4">
-                <div class="max-w-4xl mx-auto text-center">
-                    <h2 class="text-4xl font-bold mb-6 animate-fadeInDown">Bergabunglah Bersama Kami</h2>
-                    <p class="text-xl opacity-90 mb-8 animate-fadeInDown" style="animation-delay: 0.2s;">
-                        Pendaftaran tahun ajaran 2025/2026 telah dibuka. Jadilah bagian dari STM Gotham City!
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                        <div class="bg-white rounded-xl p-6 text-gray-800 animate-zoomIn" style="animation-delay: 0.1s;">
-                            <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-calendar-alt text-2xl text-blue-600"></i>
-                            </div>
-                            <h3 class="text-lg font-semibold mb-2">Jadwal Pendaftaran</h3>
-                            <p class="text-gray-600">1 Maret - 30 Juli 2025</p>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 text-gray-800 animate-zoomIn" style="animation-delay: 0.3s;">
-                            <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-file-alt text-2xl text-blue-600"></i>
-                            </div>
-                            <h3 class="text-lg font-semibold mb-2">Persyaratan</h3>
-                            <p class="text-gray-600">Ijazah SMP, Rapor, Pas Foto, KK</p>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 text-gray-800 animate-zoomIn" style="animation-delay: 0.5s;">
-                            <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-coins text-2xl text-blue-600"></i>
-                            </div>
-                            <h3 class="text-lg font-semibold mb-2">Biaya Pendaftaran</h3>
-                            <p class="text-gray-600">Rp 400.000</p>
-                        </div>
-                    </div>
-                    <a href="pendaftaran/pendaftaran.php" class="btn-hover-effect inline-block bg-white text-blue-900 px-10 py-4 rounded-lg font-semibold transition-smooth hover:bg-gray-100 animate-pulse" style="animation-delay: 0.7s;">
-                        Daftar Sekarang
-                    </a>
-                </div>
-            </div>
-        </section>
-
-        <!-- Location Section -->
-        <section id="lokasi" class="py-24 bg-gray-50">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-4 animate-fadeInDown">Lokasi Kami</h2>
-                    <div class="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div class="animate-slideInLeft">
-                        <div class="info-card p-8 text-center">
-                            <h3 class="text-2xl font-semibold text-gray-800 mb-6">Alamat dan Kontak</h3>
-                            <div class="flex justify-center items-start mb-6">
-                                <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                    <i class="fas fa-map-marker-alt text-blue-600"></i>
-                                </div>
-                                <div>
-                                    <p class="text-gray-600">
-                                        STM Gotham City<br>
-                                        Jl. Wayne Tower, Gotham City<br>
-                                        London
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex justify-center items-start mb-6">
-                                <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                    <i class="fas fa-phone-alt text-blue-600"></i>
-                                </div>
-                                <div>
-                                    <p class="text-gray-600">
-                                        911
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex justify-center items-start mb-8">
-                                <div class="bg-blue-100 p-3 rounded-full mr-4">
-                                    <i class="fas fa-envelope text-blue-600"></i>
-                                </div>
-                                <div>
-                                    <p class="text-gray-600">
-                                        <a href="mailto:ifauze343@gmail.com">ifauze343@gmail.com</a>
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex justify-center space-x-4">
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
-                                    <i class="fab fa-facebook-f"></i>
-                                </a>
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
-                                    <i class="fab fa-instagram"></i>
-                                </a>
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
-                                    <i class="fab fa-twitter"></i>
-                                </a>
-                                <a href="#" class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-smooth">
-                                    <i class="fab fa-youtube"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="animate-slideInRight">
-                        <div class="rounded-2xl overflow-hidden shadow-xl h-96">
-                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d263592.3541397476!2d-0.24167804999999998!3d51.52864165!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47d8a00baf21de75%3A0x52963a5addd52a99!2sLondon%2C%20UK!5e0!3m2!1sen!2sid!4v1730601234567!5m2!1sen!2sid" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="container mx-auto px-4 footer-content">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
-                    <div class="animate-fadeInUp" style="animation-delay: 0.1s;">
-                        <div class="flex items-center mb-6 footer-logo">
-                            <img src="https://cdn.pixabay.com/photo/2018/10/05/21/29/bat-3726896_1280.png" alt="Logo STM Gotham City" class="mr-4">
-                            <h3>STM Gotham City</h3>
-                        </div>
-                        <p class="footer-description">
-                            Sekolah vokasi teknologi terdepan yang mempersiapkan siswa untuk masa depan industri modern.
-                        </p>
-                    </div>
-                    
-                    <div class="animate-fadeInUp" style="animation-delay: 0.3s;">
-                        <h4>Tautan Cepat</h4>
-                        <ul class="space-y-3">
-                            <li><a href="#beranda">Beranda</a></li>
-                            <li><a href="#tentang">Tentang</a></li>
-                            <li><a href="#keunggulan">Keunggulan</a></li>
-                            <li><a href="#faq">FAQ</a></li>
-                            <li><a href="#galeri">Galeri</a></li>
-                            <li><a href="#lokasi">Lokasi</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="animate-fadeInUp" style="animation-delay: 0.5s;">
-                        <h4>Kontak Kami</h4>
-                        <ul class="footer-contact space-y-3">
-                            <li>
-                                <i class="fas fa-map-marker-alt"></i>
-                                Jl. Wayne Tower, Gotham City, London
-                            </li>
-                            <li>
-                                <i class="fas fa-phone-alt"></i>
-                                911
-                            </li>
-                            <li>
-                                <i class="fas fa-envelope"></i>
-                                <a href="mailto:ifauze343@gmail.com">ifauze343@gmail.com</a>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div class="animate-fadeInUp" style="animation-delay: 0.7s;">
-                        <h4>Ikuti Kami</h4>
-                        <div class="flex space-x-4 footer-social">
-                            <a href="#"><i class="fab fa-facebook-f"></i></a>
-                            <a href="#"><i class="fab fa-instagram"></i></a>
-                            <a href="#"><i class="fab fa-twitter"></i></a>
-                            <a href="#"><i class="fab fa-youtube"></i></a>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="footer-bottom mt-12">
-                    <p>© 2025 STM Gotham City. Hak Cipta Dilindungi.</p>
-                </div>
-            </div>
-        </footer>
-
-        <!-- Scroll to Top Button -->
-        <button id="scrollTopBtn" class="scroll-top">
-            <i class="fas fa-arrow-up"></i>
-        </button>
-
-        <!-- JavaScript -->
-        <script>
-            // Navbar scroll effect
-            window.addEventListener('scroll', () => {
-                const navbar = document.getElementById('navbar');
-                const scrollTopBtn = document.getElementById('scrollTopBtn');
-                if (window.scrollY > 50) {
-                    navbar.classList.add('navbar-fixed');
-                } else {
-                    navbar.classList.remove('navbar-fixed');
-                }
-                if (window.scrollY > 300) {
-                    scrollTopBtn.classList.add('active');
-                } else {
-                    scrollTopBtn.classList.remove('active');
-                }
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${tab.getAttribute('data-tab')}-login`).classList.add('active');
             });
+        });
 
-            // Mobile menu toggle
-            const mobileMenu = document.getElementById('mobile-menu');
-            const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
-            const menuButton = document.getElementById('mobile-menu-button');
-            const closeButton = document.getElementById('mobile-menu-close');
+        // Form submission
+        const studentForm = document.getElementById('studentLoginForm');
+        const adminForm = document.getElementById('adminLoginForm');
 
-            document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
-                link.style.setProperty('--index', index);
-            });
-
-            menuButton.addEventListener('click', () => {
-                mobileMenu.classList.add('active');
-                mobileMenuOverlay.classList.add('active');
-                document.querySelectorAll('#mobile-menu a').forEach(link => {
-                    link.style.opacity = '0';
-                    link.style.transform = 'translateX(-30px)';
-                });
-                setTimeout(() => {
-                    document.querySelectorAll('#mobile-menu a').forEach((link, index) => {
-                        link.style.opacity = '1';
-                        link.style.transform = 'translateX(0)';
+        studentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(studentForm);
+            fetch('login.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Network response was not ok: ${response.status} ${response.statusText}\nResponse: ${text}`);
                     });
-                }, 100);
-            });
-
-            closeButton.addEventListener('click', () => {
-                document.querySelectorAll('#mobile-menu a').forEach(link => {
-                    link.style.opacity = '0';
-                    link.style.transform = 'translateX(-30px)';
-                });
-                mobileMenu.classList.remove('active');
-                mobileMenuOverlay.classList.remove('active');
-            });
-
-            document.querySelectorAll('#mobile-menu a, #mobile-menu-overlay').forEach(element => {
-                element.addEventListener('click', () => {
-                    document.querySelectorAll('#mobile-menu a').forEach(link => {
-                        link.style.opacity = '0';
-                        link.style.transform = 'translateX(-30px)';
-                    });
-                    mobileMenu.classList.remove('active');
-                    mobileMenuOverlay.classList.remove('active');
-                });
-            });
-
-            // Smooth scrolling for anchor links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const targetId = anchor.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        window.scrollTo({
-                            top: targetElement.offsetTop - 100,
-                            behavior: 'smooth'
-                        });
+                }
+                return response.json();
+            })
+            .then(data => {
+                Swal.fire({
+                    icon: data.status,
+                    title: data.status === 'success' ? 'Selamat Datang!' : 'Gagal',
+                    text: data.message,
+                    confirmButtonColor: '#3b82f6'
+                }).then(() => {
+                    if (data.status === 'success') {
+                        window.location.href = data.redirect;
                     }
                 });
-            });
-
-            // Scroll to top button functionality
-            document.getElementById('scrollTopBtn').addEventListener('click', () => {
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Terjadi kesalahan: ' + error.message,
+                    confirmButtonColor: '#3b82f6'
                 });
             });
+        });
 
-            // Counter animation (run once per session)
-            let countersAnimated = false;
-            function animateCounters() {
-                if (countersAnimated) return;
-                countersAnimated = true;
-                const counters = document.querySelectorAll('.counter-value');
-                counters.forEach(counter => {
-                    const target = +counter.getAttribute('data-target');
-                    const duration = 2000;
-                    const increment = target / (duration / 16);
-                    let current = 0;
-                    const updateCounter = () => {
-                        current += increment;
-                        if (current < target) {
-                            counter.textContent = Math.ceil(current);
-                            requestAnimationFrame(updateCounter);
-                        } else {
-                            counter.textContent = target;
-                        }
-                    };
-                    updateCounter();
+        adminForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(adminForm);
+            fetch('login.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Network response was not ok: ${response.status} ${response.statusText}\nResponse: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                Swal.fire({
+                    icon: data.status,
+                    title: data.status === 'success' ? 'Selamat Datang!' : 'Gagal',
+                    text: data.message,
+                    confirmButtonColor: '#3b82f6'
+                }).then(() => {
+                    if (data.status === 'success') {
+                        window.location.href = data.redirect;
+                    }
                 });
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Terjadi kesalahan: ' + error.message,
+                    confirmButtonColor: '#3b82f6'
+                });
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('navbar-fixed');
+            } else {
+                navbar.classList.remove('navbar-fixed');
             }
+        });
 
-            // FAQ accordion functionality
-            document.querySelectorAll('.faq-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const isActive = item.classList.contains('active');
-                    document.querySelectorAll('.faq-item').forEach(i => {
-                        i.classList.remove('active');
-                        i.setAttribute('aria-expanded', 'false');
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // Smooth scroll untuk anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = anchor.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 150,
+                        behavior: 'smooth'
                     });
-                    if (!isActive) {
-                        item.classList.add('active');
-                        item.setAttribute('aria-expanded', 'true');
-                    }
-                });
-                item.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        item.click();
-                    }
-                });
+                    document.getElementById('mobile-menu').classList.add('hidden');
+                }
             });
+        });
 
-            // Prevent Mobile Browser Address Bar Show/Hide Affect Layout
-            let vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        // Particles animation
+        const particlesContainer = document.querySelector('.particles');
+        for (let i = 0; i < 25; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            particle.style.width = `${Math.random() * 6 + 3}px`;
+            particle.style.height = particle.style.width;
+            particle.style.left = `${Math.random() * 100}vw`;
+            particle.style.top = `${Math.random() * 100}vh`;
+            particle.style.animationDelay = `${Math.random() * 8}s`;
+            particlesContainer.appendChild(particle);
+        }
 
-            window.addEventListener('resize', () => {
-                let vh = window.innerHeight * 0.01;
-                document.documentElement.style.setProperty('--vh', `${vh}px`);
-            });
-        </script>
-    </body>
+        // Scroll ke form login
+        function scrollToLogin() {
+            const loginForm = document.getElementById('form');
+            loginForm.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
 </html>
